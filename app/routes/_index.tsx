@@ -57,7 +57,7 @@ function useScrollReveal(): [React.RefObject<HTMLDivElement | null>, boolean] {
     const el = ref.current;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.unobserve(el); } },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -185,7 +185,7 @@ export default function Home() {
     <>
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes staggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes bounce {
@@ -195,7 +195,7 @@ export default function Home() {
         @keyframes typingAppear {
           from { opacity: 0; } to { opacity: 0.5; }
         }
-        .follow-btn:hover { background: var(--forest) !important; color: #fff !important; }
+        .follow-btn:hover { background: var(--forest) !important; color: #fff !important; border-color: var(--forest) !important; }
         .find-row-hover:hover { background: var(--paper-mid); }
         .find-row-hover:hover .find-title-text { color: var(--forest); }
         .checking-dot::after {
@@ -209,7 +209,7 @@ export default function Home() {
         }
         .username-row:focus-within { border-color: var(--forest) !important; }
         .submit-btn:hover:not(:disabled) { background: var(--branch) !important; transform: scale(1.01); }
-        .signin-btn:hover { opacity: 0.9 !important; }
+        .signin-btn:hover { opacity: 0.85 !important; }
         .theme-toggle:hover { color: var(--ink) !important; }
         .beat-grid {
           display: grid;
@@ -226,7 +226,7 @@ export default function Home() {
         .platform-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 24px;
+          gap: 28px;
         }
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
@@ -244,9 +244,9 @@ export default function Home() {
           .beat-grid-flip .beat-vis { order: 0 !important; }
           .identity-grid { grid-template-columns: 1fr !important; }
           .platform-grid { grid-template-columns: 1fr !important; }
-          .landing-hero { padding: 100px 20px 48px !important; }
-          .landing-footer-inner { flex-direction: column !important; gap: 32px !important; text-align: center !important; }
-          .landing-footer-inner > div:last-child { flex-direction: column !important; gap: 20px !important; align-items: center !important; }
+          .landing-hero { padding: 80px 20px 48px !important; }
+          .landing-footer-inner { flex-direction: column !important; gap: 36px !important; text-align: center !important; }
+          .landing-footer-right { flex-direction: column !important; gap: 24px !important; align-items: center !important; }
         }
       `}} />
 
@@ -367,12 +367,12 @@ export default function Home() {
       <section ref={beat3Ref} style={{ ...styles.branchSection, ...reveal(beat3Visible) }}>
         <p style={styles.beatLabel}>BRANCHES</p>
         <h2 style={styles.beatHeading}>Explore topics together</h2>
-        <p style={{ ...styles.beatBody, maxWidth: 480, margin: "0 auto", textAlign: "center" as const }}>
+        <p style={{ ...styles.beatBody, maxWidth: 460, margin: "0 auto", textAlign: "center" as const }}>
           Invite someone to co-curate a stem. Branches let two or more people
           build a shared collection. You bring the jazz, they bring the hip-hop,
           and together you map the whole lineage.
         </p>
-        <div style={{ marginTop: 32 }}>
+        <div style={{ marginTop: 36 }}>
           <BranchMock />
         </div>
       </section>
@@ -382,12 +382,12 @@ export default function Home() {
         <div style={{ textAlign: "center" as const, marginBottom: 40 }}>
           <p style={styles.beatLabel}>SAVE FROM ANYWHERE</p>
           <h2 style={styles.beatHeading}>Two clicks from any page</h2>
-          <p style={{ ...styles.beatBody, maxWidth: 480, margin: "0 auto" }}>
+          <p style={{ ...styles.beatBody, maxWidth: 460, margin: "0 auto" }}>
             See something worth saving? The Chrome extension and iOS app let you
             add any page to your stems without breaking your flow.
           </p>
         </div>
-        <div className="platform-grid" style={{ maxWidth: 560, margin: "0 auto" }}>
+        <div className="platform-grid" style={{ maxWidth: 580, margin: "0 auto" }}>
           <div style={styles.platformCard}>
             <ChromeExtensionMock />
             <div style={styles.platformInfo}>
@@ -455,7 +455,7 @@ export default function Home() {
 
               {inlineError && <div style={styles.inlineError}>{inlineError}</div>}
 
-              <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 12 }} />
+              <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 14 }} />
 
               {checkState === "available" && (
                 <button
@@ -493,7 +493,7 @@ export default function Home() {
               <Link to="/privacy" style={styles.footerLink}>Privacy</Link>
             </div>
           </div>
-          <div style={styles.footerRight}>
+          <div style={styles.footerRight} className="landing-footer-right">
             <div style={styles.footerCol}>
               <p style={styles.footerColTitle}>Downloads</p>
               <span style={styles.footerLink}>iOS App</span>
@@ -524,7 +524,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px 40px",
+    padding: "16px 40px",
     background: "var(--paper)",
     borderBottom: "1px solid var(--paper-dark)",
     zIndex: 20,
@@ -566,7 +566,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Hero
   hero: {
     display: "flex", alignItems: "center", justifyContent: "center",
-    padding: "80px 40px 60px",
+    padding: "100px 40px 80px",
     minHeight: "calc(100vh - 60px)",
   },
   heroContent: {
@@ -578,103 +578,104 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "clamp(2.2rem, 5vw, 3.25rem)",
     fontWeight: 400, color: "var(--ink)",
     lineHeight: 1.15, letterSpacing: "-0.01em",
-    animation: "fadeIn 0.6s ease forwards",
+    animation: "fadeIn 0.8s ease forwards",
     opacity: 0,
   },
   subline: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: "1rem", color: "var(--ink-mid)",
-    marginTop: 20, letterSpacing: "0.01em",
-    animation: "fadeIn 0.6s ease 0.3s forwards",
+    fontSize: "1.05rem", color: "var(--ink-mid)",
+    marginTop: 24, letterSpacing: "0.01em",
+    animation: "fadeIn 0.8s ease 0.25s forwards",
     opacity: 0,
   },
   heroMockWrap: {
-    marginTop: 48,
+    marginTop: 56,
     display: "flex", justifyContent: "center",
-    animation: "fadeUp 0.8s ease 0.5s forwards",
+    animation: "fadeUp 1s ease 0.5s forwards",
     opacity: 0,
   },
 
   // Scroll wall
   scrollWall: {
-    maxWidth: 1040, margin: "0 auto",
-    padding: "60px 40px 80px",
+    maxWidth: 1080, margin: "0 auto",
+    padding: "80px 40px 100px",
   },
   identityCard: {
-    padding: "20px 24px",
+    padding: "24px 28px",
     background: "var(--paper-mid)",
-    borderRadius: 12,
+    borderRadius: 14,
     border: "1px solid var(--paper-dark)",
   },
   identityText: {
     fontFamily: "'DM Serif Display', serif",
     fontStyle: "italic" as const,
-    fontSize: 14, lineHeight: 1.5,
+    fontSize: 14.5, lineHeight: 1.55,
     color: "var(--ink-mid)",
   },
 
   // Positioning bridge
   bridge: {
-    maxWidth: 640, margin: "0 auto",
-    padding: "40px 40px 80px",
+    maxWidth: 620, margin: "0 auto",
+    padding: "20px 40px 100px",
     textAlign: "center" as const,
   },
   bridgeQuote: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
+    fontSize: "clamp(1.35rem, 2.8vw, 1.8rem)",
     color: "var(--ink)",
-    lineHeight: 1.4,
+    lineHeight: 1.45,
   },
 
   // Beat sections
   beatSection: {
     maxWidth: 1040, margin: "0 auto",
-    padding: "0 40px 100px",
+    padding: "0 40px 120px",
   },
   beatLabel: {
     fontFamily: "'DM Mono', monospace",
-    fontSize: 10, letterSpacing: "0.12em",
+    fontSize: 10, letterSpacing: "0.14em",
     textTransform: "uppercase" as const,
     color: "var(--forest)",
-    marginBottom: 14,
+    marginBottom: 16,
   },
   beatHeading: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
+    fontSize: "clamp(1.5rem, 2.8vw, 2rem)",
     fontWeight: 400, color: "var(--ink)",
-    lineHeight: 1.2, letterSpacing: "-0.01em",
-    marginBottom: 16,
+    lineHeight: 1.25, letterSpacing: "-0.01em",
+    marginBottom: 20,
   },
   beatBody: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 15, color: "var(--ink-mid)",
-    lineHeight: 1.75,
+    fontSize: 15.5, color: "var(--ink-mid)",
+    lineHeight: 1.8,
   },
   beatNote: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 14, color: "var(--ink-light)",
     fontStyle: "italic" as const,
-    marginTop: 16,
+    marginTop: 20,
   },
 
   // Branch section
   branchSection: {
-    maxWidth: 640, margin: "0 auto",
-    padding: "0 40px 100px",
+    maxWidth: 600, margin: "0 auto",
+    padding: "0 40px 120px",
     textAlign: "center" as const,
   },
 
   // Platform section
   platformSection: {
     maxWidth: 1040, margin: "0 auto",
-    padding: "0 40px 100px",
+    padding: "0 40px 120px",
   },
   platformCard: {
     background: "var(--surface)",
     border: "1px solid var(--paper-dark)",
     borderRadius: 16,
-    padding: 24,
+    padding: 28,
     display: "flex", flexDirection: "column" as const, gap: 20,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
   },
   platformInfo: {
     display: "flex", flexDirection: "column" as const, gap: 6,
@@ -685,7 +686,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   platformDesc: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13, color: "var(--ink-mid)", lineHeight: 1.5,
+    fontSize: 13, color: "var(--ink-mid)", lineHeight: 1.6,
   },
   platformBtnDisabled: {
     fontFamily: "'DM Sans', sans-serif",
@@ -694,9 +695,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--paper-mid)",
     border: "1px solid var(--paper-dark)",
     borderRadius: 8,
-    padding: "8px 16px",
+    padding: "8px 18px",
     textAlign: "center" as const,
-    marginTop: 8,
+    marginTop: 12,
     display: "inline-block",
     alignSelf: "flex-start" as const,
   },
@@ -704,27 +705,27 @@ const styles: Record<string, React.CSSProperties> = {
   // Signup CTA
   ctaSection: {
     background: "var(--paper-mid)",
-    padding: "80px 40px",
+    padding: "100px 40px",
   },
   ctaInner: {
-    maxWidth: 420, margin: "0 auto",
+    maxWidth: 440, margin: "0 auto",
     textAlign: "center" as const,
   },
   ctaHeading: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
+    fontSize: "clamp(1.5rem, 2.8vw, 2rem)",
     fontWeight: 400, color: "var(--ink)",
-    lineHeight: 1.2, marginBottom: 8,
+    lineHeight: 1.25, marginBottom: 10,
   },
   ctaSubline: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 15, color: "var(--ink-mid)",
-    marginBottom: 28,
+    marginBottom: 32,
   },
   usernameRow: {
     display: "flex", alignItems: "center",
     border: "1.5px solid var(--paper-dark)",
-    borderRadius: 8,
+    borderRadius: 10,
     background: "var(--surface)",
     overflow: "hidden",
     transition: "border-color 0.15s",
@@ -733,7 +734,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Mono', monospace",
     fontSize: "0.875rem",
     color: "var(--ink-mid)",
-    padding: "13px 0 13px 14px",
+    padding: "14px 0 14px 16px",
     userSelect: "none" as const,
   },
   usernameInput: {
@@ -741,23 +742,23 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     fontFamily: "'DM Mono', monospace",
     fontSize: "0.875rem", color: "var(--ink)",
-    padding: "13px 14px 13px 2px",
+    padding: "14px 16px 14px 2px",
   },
   statusMsg: {
     fontFamily: "'DM Mono', monospace",
     fontSize: "0.8rem",
-    marginTop: 8,
+    marginTop: 10,
     textAlign: "left" as const,
   },
   emailInput: {
     width: "100%", boxSizing: "border-box" as const,
     border: "1.5px solid var(--paper-dark)",
-    borderRadius: 8,
+    borderRadius: 10,
     background: "var(--surface)",
     fontFamily: "'DM Sans', sans-serif",
     fontSize: "0.9375rem", color: "var(--ink)",
-    padding: "13px 14px",
-    marginTop: 10,
+    padding: "14px 16px",
+    marginTop: 12,
     outline: "none",
   },
   inlineError: {
@@ -772,8 +773,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: "0.9375rem", fontWeight: 500,
     color: "var(--paper)", background: "var(--forest)",
-    border: "none", borderRadius: 8,
-    padding: "14px 20px", marginTop: 14,
+    border: "none", borderRadius: 10,
+    padding: "15px 20px", marginTop: 16,
     transition: "background 0.15s, transform 0.15s",
   },
   successMain: {
@@ -788,7 +789,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Footer
   footer: {
-    padding: "48px 40px",
+    padding: "56px 40px",
     borderTop: "1px solid var(--paper-dark)",
   },
   footerInner: {
