@@ -5,25 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { getUser } from "~/lib/auth.server";
 import { API_BASE } from "~/lib/config";
 import { validateUsername } from "~/lib/username";
-import {
-  InteractiveStemMock,
-  StemMock,
-  FeedMock,
-  BranchMock,
-  ChromeExtensionMock,
-  IOSAppMock,
-} from "~/components/LandingMocks";
 
 export const meta: MetaFunction = () => [
   { title: "Stem — Grow your curiosity" },
-  { name: "description", content: "Stem is where curious people collect, share, and discover what they're learning. Find trails worth following." },
+  { name: "description", content: "Stem is the place your curiosity is looking for. Find trails worth following. Leave trails worth finding." },
   { property: "og:site_name", content: "Stem" },
   { property: "og:title", content: "Stem — Grow your curiosity" },
-  { property: "og:description", content: "Stem is where curious people collect, share, and discover what they're learning. Find trails worth following." },
+  { property: "og:description", content: "A place to publicly explore the topics you're obsessed with — and find others going down the same rabbit holes." },
   { property: "og:image", content: "https://stem.md/og-image.png" },
   { property: "og:type", content: "website" },
   { name: "twitter:card", content: "summary_large_image" },
-  { name: "twitter:site", content: "@stemmd" },
+  { name: "twitter:site", content: "@amrith" },
 ];
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
@@ -32,61 +24,239 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   return json({});
 }
 
-// ── Identity lines (scroll wall) ─────────────────────────────────────────────
-
-const IDENTITY_LINES = [
+const LINES = [
   "For the person who has seventeen tabs open about the Byzantine Empire.",
   "For the one who sends their friends a link and a twelve-message explanation.",
+  "For everyone who's ever gone too deep on something and loved it.",
+  "For those who can't have lunch without watching a random YouTube video.",
   "For the person whose \"quick Google\" takes forty-five minutes.",
   "For the one who learned more from Wikipedia rabbit holes than from school.",
+  "For those who've explained the same obscure thing to three different people this week.",
   "For the person who buys books faster than they finish them.",
   "For the one who pauses a movie to look something up and never comes back.",
-  "For the one who fell in love with a subject they never studied.",
+  "For those who've said \"I'll just read one more article\" at midnight.",
+  "For the person who found their favourite band through a documentary about something completely unrelated.",
+  "For the one who can't walk past an interesting sign without photographing it.",
   "For those who have strong opinions about things nobody asked about.",
+  "For the person who annotates everything they read.",
+  "For the one who fell in love with a subject they never studied.",
+  "For those who follow people online just to see what they're obsessing over next.",
+  "For the person who finishes a book and immediately needs to talk about it with someone.",
+  "For the one whose notes app is a graveyard of ideas they haven't forgotten.",
 ];
-
-// ── Scroll reveal hook ───────────────────────────────────────────────────────
 
 type CheckState = "idle" | "checking" | "available" | "taken" | "invalid";
 
-function useScrollReveal(): [React.RefObject<HTMLDivElement | null>, boolean] {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!ref.current) return;
-    const el = ref.current;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.unobserve(el); } },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, visible];
+// ─── Mockup components ────────────────────────────────────────────────────────
+
+function StemMockup() {
+  const finds: [string, string][] = [
+    ["How memory consolidation actually works", "nature.com"],
+    ["The predictive coding framework", "aeon.co"],
+    ["Embodied cognition: a reading list", "philpapers.org"],
+    ["The Default Mode Network, explained", "sci.am"],
+    ["Against Behaviorism (Chomsky, 1959)", "mit.edu"],
+  ];
+  return (
+    <div style={mock.wrap}>
+      <div style={mock.stemTop}>
+        <span style={mock.bigEmoji}>🧠</span>
+        <div>
+          <p style={mock.stemTitle}>Cognitive science</p>
+          <p style={mock.stemMeta}>@amrith · 14 finds · public</p>
+        </div>
+      </div>
+      <div style={mock.rule} />
+      <div style={mock.findList}>
+        {finds.map(([title, domain]) => (
+          <div key={title} style={mock.findRow}>
+            <span style={mock.findTitle}>{title}</span>
+            <span style={mock.findDomain}>{domain}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+function FeedMockup() {
+  const groups: Array<{ emoji: string; stem: string; user: string; ago: string; finds: [string, string][] }> = [
+    {
+      emoji: "🎵",
+      stem: "Jazz lineage",
+      user: "@jamie",
+      ago: "2h ago",
+      finds: [
+        ["Miles Davis and the Birth of Cool", "npr.org"],
+        ["The Anatomy of a Jazz Standard", "jstor.org"],
+      ],
+    },
+    {
+      emoji: "🏛️",
+      stem: "Byzantine architecture",
+      user: "@claudia",
+      ago: "5h ago",
+      finds: [
+        ["The Hagia Sophia's engineering secrets", "bbc.com"],
+        ["Pendentives and the dome problem", "arch.edu"],
+        ["When Constantinople became Istanbul", "history.com"],
+      ],
+    },
+  ];
+  return (
+    <div style={mock.wrap}>
+      <p style={mock.feedHeading}>Feed</p>
+      <div style={mock.rule} />
+      {groups.map((g, i) => (
+        <div key={g.stem} style={i > 0 ? { ...mock.feedGroup, borderTop: "1px solid var(--paper-mid)", paddingTop: 14, marginTop: 14 } : mock.feedGroup}>
+          <div style={mock.feedGroupHead}>
+            <span style={mock.feedEmoji}>{g.emoji}</span>
+            <span style={mock.feedStem}>{g.stem}</span>
+            <span style={mock.feedDot}>·</span>
+            <span style={mock.feedUser}>{g.user}</span>
+            <span style={mock.feedDot}>·</span>
+            <span style={mock.feedTime}>{g.ago}</span>
+          </div>
+          <div style={mock.findList}>
+            {g.finds.map(([title, domain]) => (
+              <div key={title} style={mock.findRow}>
+                <span style={mock.findTitle}>{title}</span>
+                <span style={mock.findDomain}>{domain}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const mock: Record<string, React.CSSProperties> = {
+  wrap: {
+    background: "var(--surface)",
+    border: "1px solid var(--paper-dark)",
+    borderRadius: 16,
+    padding: 28,
+    boxShadow: "0 8px 48px rgba(0,0,0,0.07)",
+    width: "100%",
+    boxSizing: "border-box" as const,
+    minWidth: 0,
+  },
+  stemTop: { display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 20 },
+  bigEmoji: { fontSize: 36, lineHeight: 1, flexShrink: 0, marginTop: 2 },
+  stemTitle: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 20,
+    color: "var(--ink)",
+    lineHeight: 1.2,
+  },
+  stemMeta: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 11,
+    color: "var(--ink-light)",
+    marginTop: 5,
+  },
+  rule: { height: 1, background: "var(--paper-dark)", marginBottom: 16 },
+  findList: { display: "flex", flexDirection: "column" as const, gap: 10 },
+  findRow: { display: "flex", alignItems: "baseline", gap: 8 },
+  findTitle: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 13,
+    color: "var(--ink)",
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  findDomain: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 10,
+    color: "var(--ink-light)",
+    flexShrink: 0,
+  },
+  feedHeading: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 18,
+    color: "var(--ink)",
+    marginBottom: 16,
+  },
+  feedGroup: {},
+  feedGroupHead: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    flexWrap: "wrap" as const,
+    marginBottom: 10,
+  },
+  feedEmoji: { fontSize: 14, lineHeight: 1 },
+  feedStem: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--ink)",
+  },
+  feedDot: { color: "var(--paper-dark)", fontSize: 11 },
+  feedUser: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 11,
+    color: "var(--ink-light)",
+  },
+  feedTime: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 10,
+    color: "var(--ink-light)",
+  },
+};
+
+// ─── Page component ───────────────────────────────────────────────────────────
 
 export default function Home() {
-  // Theme
-  const [isDark, setIsDark] = useState(false);
-  const [themeReady, setThemeReady] = useState(false);
-  useEffect(() => {
-    const stored = localStorage.getItem("stem-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setIsDark(stored === "dark" || (!stored && prefersDark));
-    setThemeReady(true);
-  }, []);
-
-  // Signup state
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [checkState, setCheckState] = useState<CheckState>("idle");
   const [inlineError, setInlineError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [typewriterText, setTypewriterText] = useState("");
+  const [isDark, setIsDark] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+
+  useEffect(() => {
+    const theme = document.documentElement.dataset.theme;
+    setIsDark(theme === "dark");
+    setThemeReady(true);
+  }, []);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentUsernameRef = useRef("");
+
+  useEffect(() => {
+    let lineIndex = Math.floor(Math.random() * LINES.length);
+    let charIndex = 0;
+    function typeLine() {
+      const line = LINES[lineIndex];
+      if (charIndex < line.length) {
+        charIndex++;
+        setTypewriterText(line.slice(0, charIndex));
+        typeRef.current = setTimeout(typeLine, 48);
+      } else {
+        typeRef.current = setTimeout(backspace, 3400);
+      }
+    }
+    function backspace() {
+      if (charIndex > 0) {
+        charIndex--;
+        setTypewriterText(LINES[lineIndex].slice(0, charIndex));
+        typeRef.current = setTimeout(backspace, 22);
+      } else {
+        lineIndex = (lineIndex + 1) % LINES.length;
+        typeRef.current = setTimeout(typeLine, 320);
+      }
+    }
+    typeRef.current = setTimeout(typeLine, 800);
+    return () => { if (typeRef.current) clearTimeout(typeRef.current); };
+  }, []);
 
   const checkUsername = async (val: string) => {
     const check = validateUsername(val);
@@ -166,38 +336,11 @@ export default function Home() {
     invalid: "var(--ink-light)",
   }[checkState];
 
-  // Scroll reveals
-  const [wallRef, wallVisible] = useScrollReveal();
-  const [bridgeRef, bridgeVisible] = useScrollReveal();
-  const [beat1Ref, beat1Visible] = useScrollReveal();
-  const [beat2Ref, beat2Visible] = useScrollReveal();
-  const [beat3Ref, beat3Visible] = useScrollReveal();
-  const [beat4Ref, beat4Visible] = useScrollReveal();
-  const [ctaRef, ctaVisible] = useScrollReveal();
-
-  const reveal = (visible: boolean, delay = 0): React.CSSProperties => ({
-    opacity: visible ? 1 : 0,
-    transform: visible ? "translateY(0)" : "translateY(16px)",
-    transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s`,
-  });
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes staggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { to { opacity: 1; } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes bounce {
-          0%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-4px); }
-        }
-        @keyframes typingAppear {
-          from { opacity: 0; } to { opacity: 0.5; }
-        }
-        .follow-btn:hover { background: var(--forest) !important; color: #fff !important; }
-        .find-row-hover:hover { background: var(--paper-mid); }
-        .find-row-hover:hover .find-title-text { color: var(--forest); }
         .checking-dot::after {
           content: '';
           display: inline-block;
@@ -207,433 +350,451 @@ export default function Home() {
           margin-left: 6px; vertical-align: middle;
           animation: blink 1s ease infinite;
         }
-        .username-row:focus-within { border-color: var(--forest) !important; }
-        .submit-btn:hover:not(:disabled) { background: var(--branch) !important; transform: scale(1.01); }
+        .username-row:focus-within { border-color: var(--forest); }
+        .submit-btn:hover:not(:disabled) { background: var(--branch) !important; transform: scale(1.02); }
         .signin-btn:hover { opacity: 0.9 !important; }
         .theme-toggle:hover { color: var(--ink) !important; }
-        .beat-grid {
+        .narr-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 64px;
           align-items: center;
         }
-        .beat-grid-flip .beat-vis { order: -1; }
-        .identity-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-        }
-        .platform-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 24px;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-delay: 0ms !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-        @media (max-width: 768px) {
-          .identity-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
+        .narr-grid-flip .narr-vis { order: -1; }
+        .discord-link:hover { color: var(--branch) !important; }
         @media (max-width: 600px) {
           .landing-headline { font-size: clamp(1.7rem, 7vw, 2.2rem) !important; }
-          .beat-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-          .beat-grid-flip .beat-vis { order: 0 !important; }
-          .identity-grid { grid-template-columns: 1fr !important; }
-          .platform-grid { grid-template-columns: 1fr !important; }
-          .landing-hero { padding: 100px 20px 48px !important; }
-          .landing-footer-inner { flex-direction: column !important; gap: 32px !important; text-align: center !important; }
-          .landing-footer-inner > div:last-child { flex-direction: column !important; gap: 20px !important; align-items: center !important; }
+          .landing-nav { top: 20px !important; right: 20px !important; }
+          .landing-logo { top: 20px !important; left: 20px !important; }
+          .landing-theme-toggle { top: 26px !important; right: 100px !important; }
+          .narr-section { padding-left: 24px !important; padding-right: 24px !important; }
+          .narr-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .narr-grid-flip .narr-vis { order: 0 !important; }
+          .narr-grid .beat-text { max-width: 100% !important; }
+          .narr-vis { min-width: 0; }
+          .landing-hero { padding: 100px 24px 60px !important; }
+          .landing-footer { padding: 20px 24px !important; }
+          .below-fold { padding: 32px 24px 60px !important; }
         }
       `}} />
 
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
 
-      {/* ── 1. Nav ── */}
-      <nav style={styles.nav}>
-        <a href="/" style={styles.navBrand}>
-          <div style={styles.navLogoMark}>
-            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 24, height: 24, color: "#fff" }}>
-              <line x1="32" y1="68" x2="32" y2="42" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
-              <line x1="32" y1="20" x2="32" y2="42" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
-              <path d="M32 42 Q46 38 52 28" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" fill="none"/>
-            </svg>
-          </div>
-          <span style={styles.navWord}>stem</span>
-        </a>
-        <div style={styles.navRight}>
-          <button
-            style={{ ...styles.themeToggle, opacity: themeReady ? 1 : 0 }}
-            className="theme-toggle"
-            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            onClick={() => {
-              const next = isDark ? "light" : "dark";
-              localStorage.setItem("stem-theme", next);
-              document.documentElement.dataset.theme = next;
-              setIsDark(!isDark);
-            }}
-          >
-            {isDark ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-                <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M13.5 10.3A6 6 0 0 1 5.7 2.5 6.5 6.5 0 1 0 13.5 10.3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </button>
-          <Link to="/signin" className="signin-btn" style={styles.signInBtn}>Sign in</Link>
+      {/* Logo */}
+      <a href="/" style={styles.logo} className="landing-logo">
+        <div style={styles.logoMark}>
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 28, height: 28, color: "#FFFFFF" }}>
+            <line x1="32" y1="68" x2="32" y2="42" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"/>
+            <line x1="32" y1="20" x2="32" y2="42" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"/>
+            <path d="M32 42 Q46 38 52 28" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+          </svg>
         </div>
-      </nav>
+        <span style={styles.logoWord}>stem</span>
+      </a>
 
-      {/* ── 2. Hero ── */}
+      {/* Theme toggle */}
+      <button
+        style={{ ...styles.themeToggle, opacity: themeReady ? 1 : 0 }}
+        className="theme-toggle landing-theme-toggle"
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        onClick={() => {
+          const next = isDark ? "light" : "dark";
+          localStorage.setItem("stem-theme", next);
+          document.documentElement.dataset.theme = next;
+          setIsDark(!isDark);
+        }}
+      >
+        {isDark ? (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
+            <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13.5 10.3A6 6 0 0 1 5.7 2.5 6.5 6.5 0 1 0 13.5 10.3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </button>
+
+      <Link to="/signin" style={styles.signInBtn} className="signin-btn landing-nav">Sign in</Link>
+
+      {/* ── Hero ── */}
       <section style={styles.hero} className="landing-hero">
         <div style={styles.heroContent}>
           <h1 className="landing-headline" style={styles.headline}>
             Find trails worth following.<br />Leave trails worth finding.
           </h1>
-          <p style={styles.subline}>A home for everything you're curious about</p>
-          <div style={styles.heroMockWrap}>
-            <InteractiveStemMock />
-          </div>
-        </div>
-      </section>
+          <p style={styles.subline}>Stem is the place your curiosity is looking for.</p>
 
-      {/* ── 3. Scroll Wall ── */}
-      <section ref={wallRef} style={styles.scrollWall}>
-        <div className="identity-grid">
-          {IDENTITY_LINES.map((line, i) => (
-            <div key={i} style={{ ...styles.identityCard, ...reveal(wallVisible, i * 0.08) }}>
-              <p style={styles.identityText}>{line}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 4. Positioning Bridge ── */}
-      <section ref={bridgeRef} style={{ ...styles.bridge, ...reveal(bridgeVisible) }}>
-        <p style={styles.bridgeQuote}>
-          What Goodreads did for books and Letterboxd did for films,
-          Stem does for the rabbit holes that define your curiosity.
-        </p>
-      </section>
-
-      {/* ── 5. Beat 1: Stems + Finds ── */}
-      <section ref={beat1Ref} style={{ ...styles.beatSection, ...reveal(beat1Visible) }}>
-        <div className="beat-grid">
-          <div>
-            <p style={styles.beatLabel}>STEMS + FINDS</p>
-            <h2 style={styles.beatHeading}>Collect what catches your attention</h2>
-            <p style={styles.beatBody}>
-              Create a stem for anything you're exploring. Add the articles, videos,
-              papers, and tools that shaped your thinking. Each stem is your public
-              trail through a topic.
-            </p>
-            <p style={styles.beatNote}>Public by default. Private when you need it</p>
-          </div>
-          <div className="beat-vis">
-            <StemMock />
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6. Beat 2: Explore + Feed ── */}
-      <section ref={beat2Ref} style={{ ...styles.beatSection, ...reveal(beat2Visible) }}>
-        <div className="beat-grid beat-grid-flip">
-          <div>
-            <p style={styles.beatLabel}>EXPLORE + FEED</p>
-            <h2 style={styles.beatHeading}>See what curious people are finding</h2>
-            <p style={styles.beatBody}>
-              Follow people and stems. Your feed shows you fresh finds from
-              people exploring things you care about. Discover trails you never
-              would have stumbled on alone.
-            </p>
-          </div>
-          <div className="beat-vis">
-            <FeedMock />
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. Beat 3: Branches ── */}
-      <section ref={beat3Ref} style={{ ...styles.branchSection, ...reveal(beat3Visible) }}>
-        <p style={styles.beatLabel}>BRANCHES</p>
-        <h2 style={styles.beatHeading}>Explore topics together</h2>
-        <p style={{ ...styles.beatBody, maxWidth: 480, margin: "0 auto", textAlign: "center" as const }}>
-          Invite someone to co-curate a stem. Branches let two or more people
-          build a shared collection. You bring the jazz, they bring the hip-hop,
-          and together you map the whole lineage.
-        </p>
-        <div style={{ marginTop: 32 }}>
-          <BranchMock />
-        </div>
-      </section>
-
-      {/* ── 8. Beat 4: Save from Anywhere ── */}
-      <section ref={beat4Ref} style={{ ...styles.platformSection, ...reveal(beat4Visible) }}>
-        <div style={{ textAlign: "center" as const, marginBottom: 40 }}>
-          <p style={styles.beatLabel}>SAVE FROM ANYWHERE</p>
-          <h2 style={styles.beatHeading}>Two clicks from any page</h2>
-          <p style={{ ...styles.beatBody, maxWidth: 480, margin: "0 auto" }}>
-            See something worth saving? The Chrome extension and iOS app let you
-            add any page to your stems without breaking your flow.
-          </p>
-        </div>
-        <div className="platform-grid" style={{ maxWidth: 560, margin: "0 auto" }}>
-          <div style={styles.platformCard}>
-            <ChromeExtensionMock />
-            <div style={styles.platformInfo}>
-              <h3 style={styles.platformTitle}>Stem for Chrome</h3>
-              <p style={styles.platformDesc}>Save any page to your stems, right from your browser</p>
-              <span style={styles.platformBtnDisabled}>Coming soon</span>
-            </div>
-          </div>
-          <div style={styles.platformCard}>
-            <IOSAppMock />
-            <div style={styles.platformInfo}>
-              <h3 style={styles.platformTitle}>Stem for iOS</h3>
-              <p style={styles.platformDesc}>Share from Safari, save on the go</p>
-              <span style={styles.platformBtnDisabled}>Coming soon</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 9. Signup CTA ── */}
-      <section ref={ctaRef} style={{ ...styles.ctaSection, ...reveal(ctaVisible) }}>
-        <div style={styles.ctaInner}>
-          {success ? (
-            <div style={{ textAlign: "center" as const }}>
-              <p style={styles.successMain}>stem.md/{username} is yours.</p>
-              <p style={styles.successSub}>Check your email when we open the doors</p>
-            </div>
-          ) : (
-            <>
-              <h2 style={styles.ctaHeading}>Claim your trail</h2>
-              <p style={styles.ctaSubline}>Your curiosity deserves a home</p>
-
-              <div className="username-row" style={styles.usernameRow}>
-                <span style={styles.usernamePrefix}>stem.md/</span>
-                <input
-                  style={styles.usernameInput}
-                  type="text"
-                  placeholder="yourname"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  maxLength={20}
-                  value={username}
-                  onChange={(e) => handleUsernameChange(e.target.value)}
-                />
+          <div style={styles.formWrap}>
+            {success ? (
+              <div style={styles.successWrap}>
+                <p style={styles.successMain}>stem.md/{username} is yours.</p>
+                <p style={styles.successSub}>We'll be in touch.</p>
               </div>
-              <div
-                className={checkState === "checking" ? "checking-dot" : ""}
-                style={{ ...styles.statusMsg, color: statusColor, minHeight: "1.2em" }}
-              >
-                {statusMsg}
-              </div>
-
-              {checkState === "available" && (
-                <input
-                  style={styles.emailInput}
-                  type="email"
-                  placeholder="your@email.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              )}
-
-              {inlineError && <div style={styles.inlineError}>{inlineError}</div>}
-
-              <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 12 }} />
-
-              {checkState === "available" && (
-                <button
-                  className="submit-btn"
-                  style={{ ...styles.submitBtn, opacity: (!canSubmit || submitting) ? 0.5 : 1, cursor: (!canSubmit || submitting) ? "not-allowed" : "pointer" }}
-                  disabled={!canSubmit || submitting}
-                  onClick={handleSubmit}
+            ) : (
+              <>
+                <div className="username-row" style={styles.usernameRow}>
+                  <span style={styles.usernamePrefix}>stem.md/</span>
+                  <input
+                    style={styles.usernameInput}
+                    type="text"
+                    placeholder="yourname"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    maxLength={20}
+                    value={username}
+                    onChange={(e) => handleUsernameChange(e.target.value)}
+                  />
+                </div>
+                <div
+                  className={checkState === "checking" ? "checking-dot" : ""}
+                  style={{ ...styles.usernameStatus, color: statusColor, minHeight: "1.2em" }}
                 >
-                  {submitting ? "Claiming..." : "Claim my trail"}
-                </button>
-              )}
-            </>
-          )}
+                  {statusMsg}
+                </div>
+                {checkState === "available" && (
+                  <input
+                    style={styles.emailInput}
+                    type="email"
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                )}
+                {inlineError && <div style={styles.inlineError}>{inlineError}</div>}
+                <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 12 }} />
+                {checkState === "available" && (
+                  <button
+                    className="submit-btn"
+                    style={{ ...styles.submitBtn, opacity: (!canSubmit || submitting) ? 0.5 : 1, cursor: (!canSubmit || submitting) ? "not-allowed" : "pointer" }}
+                    disabled={!canSubmit || submitting}
+                    onClick={handleSubmit}
+                  >
+                    {submitting ? "Reserving…" : "Reserve my stem"}
+                  </button>
+                )}
+                <p style={styles.formNote}>Claim your trail.</p>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* ── 10. Footer ── */}
-      <footer style={styles.footer}>
-        <div style={styles.footerInner} className="landing-footer-inner">
-          <div style={styles.footerLeft}>
-            <div style={styles.footerBrand}>
-              <div style={styles.navLogoMark}>
-                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 20, height: 20, color: "#fff" }}>
-                  <line x1="32" y1="68" x2="32" y2="42" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/>
-                  <line x1="32" y1="20" x2="32" y2="42" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/>
-                  <path d="M32 42 Q46 38 52 28" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none"/>
-                </svg>
-              </div>
-              <span style={styles.navWord}>stem</span>
-            </div>
-            <p style={styles.footerTagline}>Made with curiosity</p>
-            <div style={styles.footerLegal}>
-              <Link to="/terms" style={styles.footerLink}>Terms</Link>
-              <span style={styles.footerDot}>·</span>
-              <Link to="/privacy" style={styles.footerLink}>Privacy</Link>
-            </div>
-          </div>
-          <div style={styles.footerRight}>
-            <div style={styles.footerCol}>
-              <p style={styles.footerColTitle}>Downloads</p>
-              <span style={styles.footerLink}>iOS App</span>
-              <span style={styles.footerLink}>Chrome Extension</span>
-            </div>
-            <div style={styles.footerCol}>
-              <p style={styles.footerColTitle}>Explore</p>
-              <Link to="/explore" style={styles.footerLink}>Discover stems</Link>
-            </div>
-            <div style={styles.footerCol}>
-              <p style={styles.footerColTitle}>Community</p>
-              <a href="/discord" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>Discord</a>
-            </div>
+      {/* ── Narrative ── */}
+      <div style={styles.narrative} className="narr-section">
+
+        {/* Opening */}
+        <div style={styles.opening}>
+          <p style={styles.beatLabel}>The curious person's problem</p>
+          <h2 style={styles.openingHeading}>
+            Every curious person leaves a trail.<br />
+            Yours deserves to be found.
+          </h2>
+          <div style={styles.openingBodyWrap}>
+            <p style={styles.openingBody}>
+              You know the feeling. One article becomes seventeen tabs. A quick
+              Google turns into an hour-long deep dive. By the end of the week
+              you've learned more about something than you ever expected to.
+            </p>
+            <p style={styles.openingBody}>
+              Everyone does this. Your friend is deep into jazz history. Your
+              colleague keeps finding fascinating things about Byzantine
+              architecture. Someone online just posted a thread about mycology
+              that you need to share with three people.
+            </p>
+            <p style={styles.pullQuote}>
+              Goodreads gave readers a home. Letterboxd gave film lovers one.
+              Stem is where the rest of your curiosity lives.
+            </p>
           </div>
         </div>
+
+        <div style={styles.sectionRule} />
+
+        {/* Beat 1 — Document */}
+        <div className="narr-grid" style={styles.beatGrid}>
+          <div style={styles.beatText} className="beat-text">
+            <p style={styles.beatLabel}>Your stems</p>
+            <h2 style={styles.beatHeading}>Share what you're exploring</h2>
+            <p style={styles.beatBody}>
+              Create a stem for anything you're diving into. Add the articles,
+              videos, and papers that shaped your thinking. Your stems are public,
+              so anyone curious about the same things can find you, follow along,
+              and contribute their own finds.
+            </p>
+            <p style={{ ...styles.beatBody, marginTop: 16, color: "var(--ink-light)", fontStyle: "italic" as const }}>
+              Public by default. Private when you need it.
+            </p>
+          </div>
+          <div className="narr-vis">
+            <StemMockup />
+          </div>
+        </div>
+
+        <div style={styles.sectionRule} />
+
+        {/* Beat 2 — Discover */}
+        <div className="narr-grid narr-grid-flip" style={styles.beatGrid}>
+          <div style={styles.beatText} className="beat-text">
+            <p style={styles.beatLabel}>Your feed</p>
+            <h2 style={styles.beatHeading}>Follow trails that intrigue you</h2>
+            <p style={styles.beatBody}>
+              Your feed shows you what the people you follow are adding to their
+              stems right now. New finds from people exploring the same things as
+              you. And trails you never would have found on your own.
+            </p>
+          </div>
+          <div className="narr-vis">
+            <FeedMockup />
+          </div>
+        </div>
+
+        <div style={styles.sectionRule} />
+
+        {/* Beat 3 — Community */}
+        <div style={styles.communityBlock}>
+          <p style={styles.beatLabel}>Community</p>
+          <h2 style={styles.communityHeading}>
+            Explore trails together
+          </h2>
+          <p style={styles.communityBody}>
+            A growing Discord community of curious people sharing what they're
+            exploring, swapping finds, and meeting others who care about the
+            same things.
+          </p>
+          <a href="/discord" target="_blank" rel="noopener noreferrer" className="discord-link" style={styles.communityLink}>
+            Join the community →
+          </a>
+        </div>
+
+      </div>
+
+      {/* ── Typewriter ── */}
+      <section style={styles.belowFold} className="below-fold">
+        <div style={styles.typewriterWrap}>
+          <p style={styles.typewriterLine}>{typewriterText || "\u00A0"}</p>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer style={styles.footer} className="landing-footer">
+        <div style={styles.footerLinks}>
+          <Link to="/terms" style={styles.footerLink}>Terms</Link>
+          <span style={styles.footerDot}>·</span>
+          <Link to="/privacy" style={styles.footerLink}>Privacy</Link>
+          <span style={styles.footerDot}>·</span>
+          <a href="/discord" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>Community</a>
+        </div>
+        <p style={styles.footerTagline}>
+          Made with curiosity by{" "}
+          <Link to="/amrith" style={styles.footerAuthor}>@amrith</Link>
+        </p>
       </footer>
     </>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
-  // Nav
-  nav: {
-    position: "sticky" as const,
-    top: 0,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "14px 40px",
-    background: "var(--paper)",
-    borderBottom: "1px solid var(--paper-dark)",
-    zIndex: 20,
-  },
-  navBrand: {
+  logo: {
+    position: "absolute",
+    top: 32, left: 40,
     display: "flex", alignItems: "center", gap: 10,
-    textDecoration: "none",
+    textDecoration: "none", zIndex: 10,
   },
-  navLogoMark: {
-    width: 32, height: 32,
+  logoMark: {
+    width: 36, height: 36,
     backgroundColor: "var(--forest)",
     borderRadius: 8,
     display: "flex", alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
-  navWord: {
+  logoWord: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: 20, color: "var(--ink)", lineHeight: 1,
-  },
-  navRight: {
-    display: "flex", alignItems: "center", gap: 16,
+    fontSize: 22, color: "var(--ink)", lineHeight: 1,
   },
   themeToggle: {
-    background: "none", border: "none",
-    color: "var(--ink-light)", cursor: "pointer",
-    padding: 4, display: "flex", alignItems: "center", justifyContent: "center",
+    position: "absolute" as const,
+    top: 40, right: 132,
+    background: "none",
+    border: "none",
+    color: "var(--ink-light)",
+    cursor: "pointer",
+    padding: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     transition: "color 0.15s",
+    zIndex: 10,
   },
   signInBtn: {
+    position: "absolute",
+    top: 36, right: 40,
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 14, fontWeight: 500,
-    color: "#fff", textDecoration: "none",
-    border: "none", borderRadius: 8,
+    color: "#fff",
+    textDecoration: "none",
+    border: "none",
+    borderRadius: 8,
     padding: "7px 16px",
     background: "var(--forest)",
     transition: "opacity 0.15s",
+    zIndex: 10,
   },
 
-  // Hero
+  // Hero (untouched structure)
   hero: {
+    position: "relative",
+    minHeight: "100vh",
     display: "flex", alignItems: "center", justifyContent: "center",
-    padding: "80px 40px 60px",
-    minHeight: "calc(100vh - 60px)",
+    padding: "120px 40px 80px",
   },
-  heroContent: {
-    maxWidth: 680, width: "100%",
-    textAlign: "center" as const,
-  },
+  heroContent: { maxWidth: 680, width: "100%", textAlign: "center" },
   headline: {
     fontFamily: "'DM Serif Display', serif",
     fontSize: "clamp(2.2rem, 5vw, 3.25rem)",
-    fontWeight: 400, color: "var(--ink)",
-    lineHeight: 1.15, letterSpacing: "-0.01em",
-    animation: "fadeIn 0.6s ease forwards",
+    lineHeight: 1.15,
+    color: "var(--ink)",
+    letterSpacing: "-0.01em",
     opacity: 0,
+    animation: "fadeIn 0.6s ease forwards 0.1s",
   },
   subline: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: "1rem", color: "var(--ink-mid)",
-    marginTop: 20, letterSpacing: "0.01em",
-    animation: "fadeIn 0.6s ease 0.3s forwards",
-    opacity: 0,
+    marginTop: 20, fontSize: "1rem",
+    color: "var(--ink-mid)", fontWeight: 400, letterSpacing: "0.01em",
   },
-  heroMockWrap: {
-    marginTop: 48,
-    display: "flex", justifyContent: "center",
-    animation: "fadeUp 0.8s ease 0.5s forwards",
-    opacity: 0,
+  formWrap: { marginTop: 44, maxWidth: 480, marginLeft: "auto", marginRight: "auto" },
+  usernameRow: {
+    display: "flex", alignItems: "stretch",
+    border: "1.5px solid var(--paper-dark)",
+    borderRadius: 8, overflow: "hidden",
+    background: "var(--paper-mid)", transition: "border-color 0.15s",
   },
-
-  // Scroll wall
-  scrollWall: {
-    maxWidth: 1040, margin: "0 auto",
-    padding: "60px 40px 80px",
+  usernamePrefix: {
+    fontFamily: "'DM Mono', monospace", fontSize: "0.875rem",
+    color: "var(--ink-mid)", background: "transparent",
+    padding: "13px 0 13px 14px", whiteSpace: "nowrap",
+    lineHeight: 1, display: "flex", alignItems: "center", userSelect: "none",
   },
-  identityCard: {
-    padding: "20px 24px",
-    background: "var(--paper-mid)",
-    borderRadius: 12,
-    border: "1px solid var(--paper-dark)",
+  usernameInput: {
+    flex: 1, background: "transparent", border: "none", outline: "none",
+    fontFamily: "'DM Mono', monospace", fontSize: "0.875rem",
+    color: "var(--ink)", padding: "13px 14px 13px 2px", minWidth: 0,
   },
-  identityText: {
+  usernameStatus: {
+    fontFamily: "'DM Mono', monospace", fontSize: "0.8rem",
+    marginTop: 8, textAlign: "left", transition: "color 0.15s",
+  },
+  emailInput: {
+    width: "100%", background: "var(--paper-mid)",
+    border: "1.5px solid var(--paper-dark)", borderRadius: 8, outline: "none",
+    fontFamily: "'DM Sans', sans-serif", fontSize: "0.9375rem",
+    color: "var(--ink)", padding: "13px 14px", marginTop: 10,
+    transition: "border-color 0.15s", display: "block",
+  },
+  inlineError: {
+    fontFamily: "'DM Mono', monospace", fontSize: "0.8rem",
+    color: "var(--taken)", marginTop: 8, textAlign: "left",
+  },
+  submitBtn: {
+    marginTop: 14, width: "100%",
+    background: "var(--forest)", color: "var(--paper)",
+    border: "none", borderRadius: 8,
+    fontFamily: "'DM Sans', sans-serif", fontSize: "0.9375rem",
+    fontWeight: 500, padding: "14px 20px",
+    transition: "background 0.15s, transform 0.1s", display: "block",
+  },
+  formNote: {
+    fontFamily: "'DM Mono', monospace", fontSize: "0.625rem",
+    color: "var(--ink-light)", marginTop: 12, textAlign: "center",
+  },
+  successWrap: { textAlign: "center" },
+  successMain: {
     fontFamily: "'DM Serif Display', serif",
-    fontStyle: "italic" as const,
-    fontSize: 14, lineHeight: 1.5,
-    color: "var(--ink-mid)",
+    fontSize: "1.5rem", color: "var(--forest)", lineHeight: 1.3,
+  },
+  successSub: { marginTop: 10, fontSize: "0.9375rem", color: "var(--ink-mid)" },
+
+  // Narrative wrapper
+  narrative: {
+    maxWidth: 1040,
+    margin: "0 auto",
+    padding: "0 40px 100px",
+    width: "100%",
+    boxSizing: "border-box" as const,
   },
 
-  // Positioning bridge
-  bridge: {
-    maxWidth: 640, margin: "0 auto",
-    padding: "40px 40px 80px",
+  // Opening
+  opening: {
+    maxWidth: 680,
+    margin: "0 auto",
+    paddingBottom: 0,
+    textAlign: "center" as const,
+    opacity: 0,
+    animation: "fadeIn 0.7s ease forwards 0.3s",
+  },
+  openingHeading: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+    lineHeight: 1.18,
+    color: "var(--ink)",
+    letterSpacing: "-0.01em",
+    marginBottom: 32,
+    marginTop: 12,
+  },
+  openingBodyWrap: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 16,
+    maxWidth: 560,
+    margin: "0 auto",
+  },
+  openingBody: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 16,
+    color: "var(--ink-mid)",
+    lineHeight: 1.75,
     textAlign: "center" as const,
   },
-  bridgeQuote: {
+  pullQuote: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
+    fontSize: 18,
     color: "var(--ink)",
-    lineHeight: 1.4,
+    lineHeight: 1.55,
+    textAlign: "center" as const,
+    borderTop: "1px solid var(--paper-dark)",
+    borderBottom: "1px solid var(--paper-dark)",
+    padding: "20px 0",
+    marginTop: 8,
   },
 
-  // Beat sections
-  beatSection: {
-    maxWidth: 1040, margin: "0 auto",
-    padding: "0 40px 100px",
+  // Section rule
+  sectionRule: {
+    width: 48,
+    height: 1,
+    background: "var(--paper-dark)",
+    margin: "80px auto",
+  },
+
+  // Beat grid (handled by .narr-grid CSS class)
+  beatGrid: {},
+
+  // Beat text column
+  beatText: {
+    maxWidth: 440,
   },
   beatLabel: {
     fontFamily: "'DM Mono', monospace",
-    fontSize: 10, letterSpacing: "0.12em",
+    fontSize: 10,
+    letterSpacing: "0.12em",
     textTransform: "uppercase" as const,
     color: "var(--forest)",
     marginBottom: 14,
@@ -641,191 +802,104 @@ const styles: Record<string, React.CSSProperties> = {
   beatHeading: {
     fontFamily: "'DM Serif Display', serif",
     fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
-    fontWeight: 400, color: "var(--ink)",
-    lineHeight: 1.2, letterSpacing: "-0.01em",
-    marginBottom: 16,
+    lineHeight: 1.2,
+    color: "var(--ink)",
+    letterSpacing: "-0.01em",
+    marginBottom: 20,
   },
   beatBody: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 15, color: "var(--ink-mid)",
+    fontSize: 15,
+    color: "var(--ink-mid)",
     lineHeight: 1.75,
   },
-  beatNote: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14, color: "var(--ink-light)",
-    fontStyle: "italic" as const,
-    marginTop: 16,
-  },
 
-  // Branch section
-  branchSection: {
-    maxWidth: 640, margin: "0 auto",
-    padding: "0 40px 100px",
+  // Community block
+  communityBlock: {
+    maxWidth: 560,
+    margin: "0 auto",
     textAlign: "center" as const,
   },
-
-  // Platform section
-  platformSection: {
-    maxWidth: 1040, margin: "0 auto",
-    padding: "0 40px 100px",
-  },
-  platformCard: {
-    background: "var(--surface)",
-    border: "1px solid var(--paper-dark)",
-    borderRadius: 16,
-    padding: 24,
-    display: "flex", flexDirection: "column" as const, gap: 20,
-  },
-  platformInfo: {
-    display: "flex", flexDirection: "column" as const, gap: 6,
-  },
-  platformTitle: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 16, fontWeight: 600, color: "var(--ink)",
-  },
-  platformDesc: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13, color: "var(--ink-mid)", lineHeight: 1.5,
-  },
-  platformBtnDisabled: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13, fontWeight: 500,
-    color: "var(--ink-light)",
-    background: "var(--paper-mid)",
-    border: "1px solid var(--paper-dark)",
-    borderRadius: 8,
-    padding: "8px 16px",
-    textAlign: "center" as const,
-    marginTop: 8,
-    display: "inline-block",
-    alignSelf: "flex-start" as const,
-  },
-
-  // Signup CTA
-  ctaSection: {
-    background: "var(--paper-mid)",
-    padding: "80px 40px",
-  },
-  ctaInner: {
-    maxWidth: 420, margin: "0 auto",
-    textAlign: "center" as const,
-  },
-  ctaHeading: {
+  communityHeading: {
     fontFamily: "'DM Serif Display', serif",
     fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
-    fontWeight: 400, color: "var(--ink)",
-    lineHeight: 1.2, marginBottom: 8,
+    lineHeight: 1.2,
+    color: "var(--ink)",
+    letterSpacing: "-0.01em",
+    marginBottom: 16,
+    marginTop: 12,
   },
-  ctaSubline: {
+  communityBody: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 15, color: "var(--ink-mid)",
-    marginBottom: 28,
-  },
-  usernameRow: {
-    display: "flex", alignItems: "center",
-    border: "1.5px solid var(--paper-dark)",
-    borderRadius: 8,
-    background: "var(--surface)",
-    overflow: "hidden",
-    transition: "border-color 0.15s",
-  },
-  usernamePrefix: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "0.875rem",
+    fontSize: 15,
     color: "var(--ink-mid)",
-    padding: "13px 0 13px 14px",
-    userSelect: "none" as const,
+    lineHeight: 1.75,
+    maxWidth: 460,
+    margin: "0 auto",
   },
-  usernameInput: {
-    flex: 1, border: "none", outline: "none",
-    background: "transparent",
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "0.875rem", color: "var(--ink)",
-    padding: "13px 14px 13px 2px",
-  },
-  statusMsg: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "0.8rem",
-    marginTop: 8,
-    textAlign: "left" as const,
-  },
-  emailInput: {
-    width: "100%", boxSizing: "border-box" as const,
-    border: "1.5px solid var(--paper-dark)",
-    borderRadius: 8,
-    background: "var(--surface)",
+  communityLink: {
+    display: "inline-block",
+    marginTop: 28,
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: "0.9375rem", color: "var(--ink)",
-    padding: "13px 14px",
-    marginTop: 10,
-    outline: "none",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "var(--forest)",
+    textDecoration: "none",
+    transition: "color 0.15s",
   },
-  inlineError: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "0.8rem",
-    color: "var(--taken)",
-    marginTop: 8,
-    textAlign: "left" as const,
-  },
-  submitBtn: {
+
+  // Typewriter
+  belowFold: {
+    padding: "40px 40px 80px",
+    borderTop: "1px solid var(--paper-dark)",
+    maxWidth: 860,
+    margin: "0 auto",
     width: "100%",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: "0.9375rem", fontWeight: 500,
-    color: "var(--paper)", background: "var(--forest)",
-    border: "none", borderRadius: 8,
-    padding: "14px 20px", marginTop: 14,
-    transition: "background 0.15s, transform 0.15s",
   },
-  successMain: {
+  typewriterWrap: {
+    minHeight: "2.2em",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  typewriterLine: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: "1.5rem", color: "var(--forest)",
-  },
-  successSub: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: "0.9375rem", color: "var(--ink-mid)",
-    marginTop: 10,
+    fontStyle: "italic",
+    fontSize: "clamp(1.1rem, 2.5vw, 1.4rem)",
+    color: "var(--ink-mid)",
+    lineHeight: 1.45,
+    textAlign: "center",
   },
 
   // Footer
   footer: {
-    padding: "48px 40px",
+    padding: "24px 40px",
     borderTop: "1px solid var(--paper-dark)",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    gap: 8,
   },
-  footerInner: {
-    maxWidth: 1040, margin: "0 auto",
-    display: "flex", justifyContent: "space-between",
-    gap: 60,
-  },
-  footerLeft: {
-    display: "flex", flexDirection: "column" as const, gap: 12,
-  },
-  footerBrand: {
-    display: "flex", alignItems: "center", gap: 10,
-  },
-  footerTagline: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 12, color: "var(--ink-light)",
-  },
-  footerLegal: {
-    display: "flex", gap: 8, marginTop: 4,
-  },
-  footerRight: {
-    display: "flex", gap: 48,
-  },
-  footerCol: {
-    display: "flex", flexDirection: "column" as const, gap: 8,
-  },
-  footerColTitle: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13, fontWeight: 600, color: "var(--ink)",
-    marginBottom: 4,
+  footerLinks: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
   },
   footerLink: {
     fontFamily: "'DM Mono', monospace",
-    fontSize: 12, color: "var(--ink-light)",
+    fontSize: 12,
+    color: "var(--ink-light)",
     textDecoration: "none",
   },
   footerDot: {
-    color: "var(--paper-dark)", fontSize: 10,
+    color: "var(--paper-dark)",
+    fontSize: 10,
+  },
+  footerTagline: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 11,
+    color: "var(--ink-light)",
+  },
+  footerAuthor: {
+    color: "var(--ink-mid)",
+    textDecoration: "none",
   },
 };
