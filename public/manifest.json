@@ -1,0 +1,31 @@
+{
+  "name": "Stem",
+  "short_name": "Stem",
+  "description": "Curate what you're learning.",
+  "start_url": "/feed",
+  "display": "standalone",
+  "background_color": "#F7F4EF",
+  "theme_color": "#F7F4EF",
+  "orientation": "portrait",
+  "categories": ["social", "education"],
+  "icons": [
+    {
+      "src": "https://assets.stem.md/stem-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://assets.stem.md/stem-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://assets.stem.md/stem-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

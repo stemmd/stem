@@ -1,0 +1,36 @@
+{
+  "name": "stem",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "build": "remix vite:build",
+    "deploy": "npm run build && wrangler pages deploy",
+    "dev": "remix vite:dev",
+    "migrate": "wrangler d1 execute stems-waitlist --file=migrations/001_app_schema.sql",
+    "migrate:local": "wrangler d1 execute stems-waitlist --file=migrations/001_app_schema.sql --local",
+    "migrate:remote": "wrangler d1 execute stems-waitlist --file=migrations/001_app_schema.sql --remote",
+    "seed:local": "wrangler d1 execute stems-waitlist --file=migrations/002_seed_curator.sql --local",
+    "seed:remote": "wrangler d1 execute stems-waitlist --file=migrations/002_seed_curator.sql --remote",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@remix-run/cloudflare": "^2.15.0",
+    "@remix-run/cloudflare-pages": "^2.15.0",
+    "@remix-run/react": "^2.15.0",
+    "isbot": "^4.4.0",
+    "nanoid": "^5.0.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240524.0",
+    "@remix-run/dev": "^2.15.0",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "typescript": "^5.1.6",
+    "vite": "^5.1.0",
+    "vite-tsconfig-paths": "^4.3.1",
+    "wrangler": "^3.78.12"
+  }
+}

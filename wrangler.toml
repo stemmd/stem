@@ -1,0 +1,16 @@
+name = "stem"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./build/client"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stems-waitlist"
+database_id = "9e7c7232-2b07-484f-9e7b-dfb3e2bba138"
+
+[[r2_buckets]]
+binding = "AVATAR_BUCKET"
+bucket_name = "stem-avatars"
+
+[vars]
+AVATAR_BUCKET_URL = "https://assets.stem.md"

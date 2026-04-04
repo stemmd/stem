@@ -1,0 +1,14 @@
+node_modules
+.wrangler
+
+/.cache
+/build
+/public/build
+.env
+.dev.vars
+
+# tsc build artifacts (not part of the Remix build pipeline)
+app/**/*.js
+/*.js
+functions/**/*.js
+watch-history.json
