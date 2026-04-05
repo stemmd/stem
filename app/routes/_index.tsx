@@ -464,19 +464,19 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillAbove="var(--paper-mid)" fillBelow="var(--paper-mid)" />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Problem: Convergence ── */}
-      <div id="problem" style={{ background: "var(--paper-mid)" }}>
+      <div id="problem">
         <ConvergenceSection />
       </div>
 
-      <WavyDivider fillAbove="var(--paper-mid)" />
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── Beat 1: Your stems ── */}
       <section
         ref={beat1Ref}
-        style={{ ...styles.beatSection, opacity: beat1Vis ? 1 : 0, transform: beat1Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: beat1Vis ? 1 : 0, transform: beat1Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
@@ -502,12 +502,12 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillBelow="var(--paper-mid)" />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Beat 2: Explore ── */}
       <section
         ref={beat2Ref}
-        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: beat2Vis ? 1 : 0, transform: beat2Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, opacity: beat2Vis ? 1 : 0, transform: beat2Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
@@ -526,12 +526,12 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillAbove="var(--paper-mid)" />
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── Beat 3: Branches ── */}
       <section
         ref={beat3Ref}
-        style={{ ...styles.beatSection, opacity: beat3Vis ? 1 : 0, transform: beat3Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: beat3Vis ? 1 : 0, transform: beat3Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
@@ -560,12 +560,12 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillBelow="var(--paper-mid)" />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Beat: iOS App ── */}
       <section
         ref={iosRef}
-        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
@@ -585,12 +585,12 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillAbove="var(--paper-mid)" />
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── Beat: Chrome Extension ── */}
       <section
         ref={chromeRef}
-        style={{ ...styles.beatSection, opacity: chromeVis ? 1 : 0, transform: chromeVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: chromeVis ? 1 : 0, transform: chromeVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
@@ -610,7 +610,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Typewriter ── */}
       <section style={styles.typewriterSection}>
