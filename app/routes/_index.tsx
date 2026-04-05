@@ -731,6 +731,7 @@ const CSS_TEXT = `
     .cta-section { padding: 60px 24px !important; }
     .landing-footer { padding: 20px 24px !important; }
     .apps-grid { flex-direction: column; align-items: center; }
+    .convergence-columns { grid-template-columns: 1fr !important; gap: 40px !important; }
   }
 `;
 // ── Styles ───────────────────────────────────────────────────────────────────
