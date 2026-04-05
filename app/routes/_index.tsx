@@ -163,61 +163,66 @@ function PhoneMockup() {
 
 function BrowserMockup() {
   return (
-    <svg viewBox="0 0 360 240" fill="none" style={{ width: 400, height: "auto", maxWidth: "100%" }}>
+    <svg viewBox="0 0 400 280" fill="none" style={{ width: 420, height: "auto", maxWidth: "100%" }}>
       {/* Browser frame */}
-      <rect x="2" y="2" width="356" height="236" rx="10" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
+      <rect x="2" y="2" width="396" height="276" rx="10" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
       {/* Title bar */}
-      <rect x="2" y="2" width="356" height="32" rx="10" fill="var(--paper-mid)" />
-      <rect x="2" y="24" width="356" height="10" fill="var(--paper-mid)" />
+      <rect x="2" y="2" width="396" height="32" rx="10" fill="var(--paper-mid)" />
+      <rect x="2" y="24" width="396" height="10" fill="var(--paper-mid)" />
       {/* Window dots */}
       <circle cx="18" cy="18" r="4.5" fill="#FF5F57" />
       <circle cx="32" cy="18" r="4.5" fill="#FEBC2E" />
       <circle cx="46" cy="18" r="4.5" fill="#28C840" />
       {/* Tab */}
-      <rect x="62" y="6" width="100" height="22" rx="6" fill="var(--paper)" />
+      <rect x="62" y="6" width="110" height="22" rx="6" fill="var(--paper)" />
       <text x="72" y="21" fontFamily="DM Sans" fontSize="8" fill="var(--ink-mid)">Urban foraging guide...</text>
       {/* Address bar */}
-      <rect x="12" y="38" width="336" height="20" rx="6" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <rect x="12" y="38" width="376" height="20" rx="6" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
       <text x="24" y="51" fontFamily="DM Mono" fontSize="7" fill="var(--ink-light)">🔒 example.com/urban-foraging-beginners-guide</text>
       {/* Stem extension icon in toolbar */}
-      <rect x="328" y="40" width="14" height="14" rx="3" fill="var(--forest)" />
-      <text x="330" y="51" fontFamily="DM Sans" fontSize="8" fill="white">S</text>
+      <rect x="368" y="40" width="14" height="14" rx="3" fill="var(--forest)" />
+      <g transform="translate(369, 41) scale(0.15)">
+        <line x1="32" y1="68" x2="32" y2="42" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+        <line x1="32" y1="20" x2="32" y2="42" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+        <path d="M32 42 Q46 38 52 28" stroke="white" strokeWidth="5" strokeLinecap="round" fill="none"/>
+      </g>
 
       {/* Page content — article-like */}
-      <rect x="24" y="72" width="180" height="10" rx="2" fill="var(--paper-dark)" opacity="0.5" />
-      <rect x="24" y="88" width="280" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="98" width="260" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="108" width="240" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="118" width="200" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="134" width="270" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="144" width="250" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
-      <rect x="24" y="154" width="220" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="72" width="200" height="10" rx="2" fill="var(--paper-dark)" opacity="0.5" />
+      <rect x="24" y="88" width="320" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="98" width="300" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="108" width="280" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="118" width="240" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="134" width="310" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="144" width="290" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="154" width="260" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="170" width="300" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="180" width="270" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
 
       {/* Extension popup overlay */}
-      <rect x="210" y="60" width="138" height="168" rx="10" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1.5">
-      </rect>
+      <rect x="240" y="60" width="148" height="178" rx="10" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1.5" />
       <g>
         {/* Popup header */}
-        <text x="226" y="82" fontFamily="DM Serif Display" fontSize="11" fill="var(--ink)">Save to Stem</text>
-        <rect x="222" y="90" width="114" height="1" fill="var(--paper-dark)" />
+        <text x="258" y="82" fontFamily="DM Serif Display" fontSize="11" fill="var(--ink)">Save to Stem</text>
+        <rect x="252" y="90" width="124" height="1" fill="var(--paper-dark)" />
 
         {/* Current page preview */}
-        <text x="226" y="108" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Saving this page:</text>
-        <rect x="222" y="114" width="114" height="22" rx="4" fill="var(--paper-mid)" />
-        <text x="228" y="128" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">Urban foraging beginners guide</text>
+        <text x="258" y="108" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Saving this page:</text>
+        <rect x="252" y="114" width="124" height="22" rx="4" fill="var(--paper-mid)" />
+        <text x="258" y="128" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">Urban foraging beginners guide</text>
 
         {/* Choose stem */}
-        <text x="226" y="152" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Choose a stem:</text>
-        <rect x="222" y="158" width="114" height="18" rx="4" fill="var(--paper-mid)" stroke="var(--forest)" strokeWidth="1" />
-        <text x="228" y="170" fontFamily="DM Sans" fontSize="8" fill="var(--ink)">🌿 Urban foraging</text>
-        <text x="324" y="170" fontFamily="DM Sans" fontSize="7" fill="var(--ink-light)">▾</text>
+        <text x="258" y="152" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Choose a stem:</text>
+        <rect x="252" y="158" width="124" height="18" rx="4" fill="var(--paper-mid)" stroke="var(--forest)" strokeWidth="1" />
+        <text x="258" y="170" fontFamily="DM Sans" fontSize="8" fill="var(--ink)">🌿 Urban foraging</text>
+        <text x="364" y="170" fontFamily="DM Sans" fontSize="7" fill="var(--ink-light)">▾</text>
 
         {/* Save button */}
-        <rect x="222" y="186" width="114" height="26" rx="6" fill="var(--forest)" />
-        <text x="258" y="203" fontFamily="DM Sans" fontSize="9" fill="white" fontWeight="500">Save find</text>
+        <rect x="252" y="186" width="124" height="26" rx="6" fill="var(--forest)" />
+        <text x="290" y="203" fontFamily="DM Sans" fontSize="9" fill="white" fontWeight="500">Save find</text>
 
         {/* Success check hint */}
-        <text x="226" y="222" fontFamily="DM Mono" fontSize="6" fill="var(--forest)">✓ Saved to Urban foraging</text>
+        <text x="258" y="228" fontFamily="DM Mono" fontSize="6" fill="var(--forest)">✓ Saved to Urban foraging</text>
       </g>
     </svg>
   );
@@ -456,11 +461,11 @@ export default function Home() {
       <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Problem: Convergence ── */}
-      <div id="problem">
+      <div id="problem" style={{ background: "var(--paper-mid)" }}>
         <ConvergenceSection />
       </div>
 
-      <WavyDivider />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Beat 1: Your stems ── */}
       <section
@@ -496,7 +501,7 @@ export default function Home() {
       {/* ── Beat 2: Explore ── */}
       <section
         ref={beat2Ref}
-        style={{ ...styles.beatSection, opacity: beat2Vis ? 1 : 0, transform: beat2Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: beat2Vis ? 1 : 0, transform: beat2Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
@@ -515,7 +520,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Beat 3: Branches ── */}
       <section
@@ -554,7 +559,7 @@ export default function Home() {
       {/* ── Beat: iOS App ── */}
       <section
         ref={iosRef}
-        style={{ ...styles.beatSection, opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, background: "var(--paper-mid)", opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
@@ -574,7 +579,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Beat: Chrome Extension ── */}
       <section
@@ -870,7 +875,7 @@ const styles: Record<string, React.CSSProperties> = {
   heroBtn: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 15, fontWeight: 500,
-    color: "var(--paper)",
+    color: "#fff",
     background: "var(--forest)",
     border: "none",
     borderRadius: 10,
@@ -1017,7 +1022,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "13px 20px",
     background: "var(--forest)",
-    color: "var(--paper)",
+    color: "#fff",
     border: "none",
     borderRadius: 10,
     fontFamily: "'DM Sans', sans-serif",
