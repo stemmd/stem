@@ -557,7 +557,7 @@ export default function Home() {
         style={{ ...styles.beatSection, opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
-        <div style={styles.beatGrid} className="beat-grid">
+        <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
           <div style={styles.beatText}>
             <p style={styles.beatLabel}>iOS app</p>
             <h2 style={styles.beatHeading}>Save from your phone</h2>
@@ -582,7 +582,7 @@ export default function Home() {
         style={{ ...styles.beatSection, opacity: chromeVis ? 1 : 0, transform: chromeVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
-        <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
+        <div style={styles.beatGrid} className="beat-grid">
           <div style={styles.beatText}>
             <p style={styles.beatLabel}>Chrome extension</p>
             <h2 style={styles.beatHeading}>Save while you browse</h2>
@@ -764,6 +764,7 @@ const CSS_TEXT = `
     margin: 0 auto;
   }
 
+  .beat-vis { display: flex; justify-content: center; }
   .beat-grid-flip .beat-vis { order: -1; }
 
   @media (max-width: 600px) {
