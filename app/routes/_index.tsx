@@ -74,13 +74,19 @@ function useInView(options?: IntersectionObserverInit): [React.RefObject<HTMLDiv
 
 // ── Wavy divider ─────────────────────────────────────────────────────────────
 
-function WavyDivider({ fillAbove }: { fillAbove?: string } = {}) {
+function WavyDivider({ fillAbove, fillBelow }: { fillAbove?: string; fillBelow?: string } = {}) {
   return (
     <svg viewBox="0 0 1200 24" preserveAspectRatio="none" style={{ width: "100%", height: 24, display: "block" }}>
       {fillAbove && (
         <path
           d="M0 0 L0 12 Q150 0 300 12 Q450 24 600 12 Q750 0 900 12 Q1050 24 1200 12 L1200 0 Z"
           fill={fillAbove}
+        />
+      )}
+      {fillBelow && (
+        <path
+          d="M0 24 L0 12 Q150 0 300 12 Q450 24 600 12 Q750 0 900 12 Q1050 24 1200 12 L1200 24 Z"
+          fill={fillBelow}
         />
       )}
       <path
@@ -458,7 +464,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider fillAbove="var(--paper-mid)" />
+      <WavyDivider fillAbove="var(--paper-mid)" fillBelow="var(--paper-mid)" />
 
       {/* ── Problem: Convergence ── */}
       <div id="problem" style={{ background: "var(--paper-mid)" }}>
@@ -496,7 +502,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── Beat 2: Explore ── */}
       <section
@@ -554,7 +560,7 @@ export default function Home() {
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── Beat: iOS App ── */}
       <section
@@ -612,6 +618,8 @@ export default function Home() {
           <p style={styles.typewriterLine}>{typewriterText || "\u00A0"}</p>
         </div>
       </section>
+
+      <WavyDivider fillBelow="var(--paper-mid)" />
 
       {/* ── CTA ── */}
       <section id="signup" style={styles.ctaSection} className="cta-section">
@@ -965,8 +973,7 @@ const styles: Record<string, React.CSSProperties> = {
   // CTA section
   ctaSection: {
     padding: "80px 40px 100px",
-    background: `linear-gradient(180deg, var(--paper-mid) 0%, var(--paper) 100%)`,
-    backgroundImage: NOISE_BG,
+    background: `linear-gradient(180deg, var(--paper-mid) 0%, var(--paper) 100%), ${NOISE_BG}`,
   },
   ctaInner: {
     maxWidth: 480,
