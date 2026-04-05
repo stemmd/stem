@@ -480,7 +480,7 @@ export default function Home() {
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
-          <div style={styles.beatText}>
+          <div style={styles.beatText} className="beat-text">
             <p style={styles.beatLabel}>Your stems</p>
             <h2 style={styles.beatHeading}>Share what you're exploring</h2>
             <p style={styles.beatBody}>
@@ -511,7 +511,7 @@ export default function Home() {
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
-          <div style={styles.beatText}>
+          <div style={styles.beatText} className="beat-text">
             <p style={styles.beatLabel}>Explore</p>
             <h2 style={styles.beatHeading}>Discover what others are exploring</h2>
             <p style={styles.beatBody}>
@@ -535,7 +535,7 @@ export default function Home() {
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
-          <div style={styles.beatText}>
+          <div style={styles.beatText} className="beat-text">
             <p style={styles.beatLabel}>Branches</p>
             <h2 style={styles.beatHeading}>Explore together</h2>
             <p style={styles.beatBody}>
@@ -569,7 +569,7 @@ export default function Home() {
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
-          <div style={styles.beatText}>
+          <div style={styles.beatText} className="beat-text">
             <p style={styles.beatLabel}>iOS app</p>
             <h2 style={styles.beatHeading}>Save from your phone</h2>
             <p style={styles.beatBody}>
@@ -594,7 +594,7 @@ export default function Home() {
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
-          <div style={styles.beatText}>
+          <div style={styles.beatText} className="beat-text">
             <p style={styles.beatLabel}>Chrome extension</p>
             <h2 style={styles.beatHeading}>Save while you browse</h2>
             <p style={styles.beatBody}>
@@ -613,7 +613,7 @@ export default function Home() {
       <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Typewriter ── */}
-      <section style={styles.typewriterSection}>
+      <section style={styles.typewriterSection} className="typewriter-section">
         <div style={styles.typewriterWrap}>
           <p style={styles.typewriterLine}>{typewriterText || "\u00A0"}</p>
         </div>
@@ -785,13 +785,18 @@ const CSS_TEXT = `
     .landing-nav { padding: 16px 20px !important; }
     .landing-hero { padding: 100px 24px 60px !important; min-height: auto !important; }
     .hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-    .hero-mockup { display: none !important; }
+    .hero-mockup { display: block !important; }
     .beat-section { padding: 60px 24px !important; }
     .beat-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
     .beat-grid-flip .beat-vis { order: 0 !important; }
+    .beat-text { max-width: 100% !important; }
     .cta-section { padding: 60px 24px !important; }
     .landing-footer { padding: 20px 24px !important; }
     .convergence-columns { grid-template-columns: 1fr !important; gap: 40px !important; }
+    .convergence-section { padding: 60px 24px 40px !important; }
+    .explore-grid { grid-template-columns: 1fr !important; }
+    .stem-mockup { padding: 20px !important; max-width: 100% !important; }
+    .typewriter-section { padding: 40px 24px !important; }
   }
 `;
 // ── Styles ───────────────────────────────────────────────────────────────────

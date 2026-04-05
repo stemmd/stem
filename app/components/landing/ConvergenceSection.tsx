@@ -101,7 +101,7 @@ const STEM_CARDS = [
 
 export function ConvergenceSection() {
   return (
-    <section style={s.section}>
+    <section style={s.section} className="convergence-section">
       <p style={s.label}>Feed your curiosity</p>
       <h2 style={s.heading}>From brainrot to breadcrumbs</h2>
 

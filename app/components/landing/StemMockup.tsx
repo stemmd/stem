@@ -220,7 +220,7 @@ export function StemMockup({
       : `@amrith · ${resolvedFinds.length} finds · public`);
 
   return (
-    <div style={s.wrap}>
+    <div style={s.wrap} className="stem-mockup">
       <div style={s.top}>
         <span style={s.emoji}>{emoji}</span>
         <div>

@@ -57,7 +57,7 @@ export function ExploreMockup() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   return (
-    <div style={s.grid}>
+    <div style={s.grid} className="explore-grid">
       {CARDS.map((card, i) => {
         const isExpanded = expandedIndex === i;
         return (
