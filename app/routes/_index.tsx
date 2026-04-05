@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { getUser } from "~/lib/auth.server";
 import { API_BASE } from "~/lib/config";
 import { validateUsername } from "~/lib/username";
-import { StemMockup } from "~/components/landing/StemMockup";
+import { StemMockup, pickRandomStems } from "~/components/landing/StemMockup";
+import type { StemData } from "~/components/landing/StemMockup";
 import { ExploreMockup } from "~/components/landing/ExploreMockup";
 import { ConvergenceSection } from "~/components/landing/ConvergenceSection";
 
@@ -73,9 +74,15 @@ function useInView(options?: IntersectionObserverInit): [React.RefObject<HTMLDiv
 
 // ── Wavy divider ─────────────────────────────────────────────────────────────
 
-function WavyDivider() {
+function WavyDivider({ fillAbove }: { fillAbove?: string } = {}) {
   return (
     <svg viewBox="0 0 1200 24" preserveAspectRatio="none" style={{ width: "100%", height: 24, display: "block" }}>
+      {fillAbove && (
+        <path
+          d="M0 0 L0 12 Q150 0 300 12 Q450 24 600 12 Q750 0 900 12 Q1050 24 1200 12 L1200 0 Z"
+          fill={fillAbove}
+        />
+      )}
       <path
         d="M0 12 Q150 0 300 12 Q450 24 600 12 Q750 0 900 12 Q1050 24 1200 12"
         fill="none"
@@ -93,7 +100,7 @@ const NOISE_BG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='ht
 
 function PhoneMockup() {
   return (
-    <svg viewBox="0 0 180 360" fill="none" style={{ width: 180, height: "auto" }}>
+    <svg viewBox="0 0 180 360" fill="none" style={{ width: 220, height: "auto", maxWidth: "100%" }}>
       {/* Phone frame */}
       <rect x="4" y="4" width="172" height="352" rx="24" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
       {/* Dynamic island */}
@@ -156,7 +163,7 @@ function PhoneMockup() {
 
 function BrowserMockup() {
   return (
-    <svg viewBox="0 0 360 240" fill="none" style={{ width: 320, height: "auto" }}>
+    <svg viewBox="0 0 360 240" fill="none" style={{ width: 400, height: "auto", maxWidth: "100%" }}>
       {/* Browser frame */}
       <rect x="2" y="2" width="356" height="236" rx="10" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
       {/* Title bar */}
@@ -232,16 +239,24 @@ export default function Home() {
   const typeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentUsernameRef = useRef("");
 
+  // Random stem selection (2 non-repeating, excluding Jazz lineage which is hardcoded in Beat 3)
+  const [randomStems] = useState<StemData[]>(() => pickRandomStems(2, ["Jazz lineage"]));
+
   // Beat refs for fade-up
   const [beat1Ref, beat1Vis] = useInView();
   const [beat2Ref, beat2Vis] = useInView();
   const [beat3Ref, beat3Vis] = useInView();
-  const [appsRef, appsVis] = useInView();
+  const [iosRef, iosVis] = useInView();
+  const [chromeRef, chromeVis] = useInView();
 
-  // Theme detection
+  // Theme detection — check explicit dataset.theme first, then system preference
   useEffect(() => {
-    const theme = document.documentElement.dataset.theme;
-    setIsDark(theme === "dark");
+    const explicit = document.documentElement.dataset.theme;
+    if (explicit) {
+      setIsDark(explicit === "dark");
+    } else {
+      setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
     setThemeReady(true);
   }, []);
 
@@ -388,10 +403,14 @@ export default function Home() {
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-                <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="8" y1="1.5" x2="8" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="8" y1="13" x2="8" y2="14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="1.5" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="13" y1="8" x2="14.5" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="3.4" y1="3.4" x2="4.2" y2="4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="11.8" y1="11.8" x2="12.6" y2="12.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="12.6" y1="3.4" x2="11.8" y2="4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="4.2" y1="11.8" x2="3.4" y2="12.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             ) : (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -423,12 +442,18 @@ export default function Home() {
             </div>
           </div>
           <div style={styles.heroMockup} className="hero-mockup">
-            <StemMockup animated />
+            <StemMockup
+              emoji={randomStems[0].emoji}
+              title={randomStems[0].title}
+              finds={randomStems[0].finds}
+              meta={`@${randomStems[0].author} · ${randomStems[0].finds.length} finds · public`}
+              animated
+            />
           </div>
         </div>
       </section>
 
-      <WavyDivider />
+      <WavyDivider fillAbove="var(--paper-mid)" />
 
       {/* ── Problem: Convergence ── */}
       <div id="problem">
@@ -455,7 +480,13 @@ export default function Home() {
             </p>
           </div>
           <div className="beat-vis">
-            <StemMockup hoverable />
+            <StemMockup
+              emoji={randomStems[1].emoji}
+              title={randomStems[1].title}
+              finds={randomStems[1].finds}
+              meta={`@${randomStems[1].author} · ${randomStems[1].finds.length} finds · public`}
+              hoverable
+            />
           </div>
         </div>
       </section>
@@ -520,22 +551,50 @@ export default function Home() {
 
       <WavyDivider />
 
-      {/* ── Apps ── */}
+      {/* ── Beat: iOS App ── */}
       <section
-        ref={appsRef}
-        style={{ ...styles.appsSection, opacity: appsVis ? 1 : 0, transform: appsVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        ref={iosRef}
+        style={{ ...styles.beatSection, opacity: iosVis ? 1 : 0, transform: iosVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        className="beat-section"
       >
-        <p style={styles.beatLabel}>Everywhere</p>
-        <h2 style={styles.appsHeading}>Save from anywhere</h2>
-        <p style={styles.appsSubline}>Found something worth keeping? Save it to a stem from wherever you are.</p>
-        <div style={styles.appsGrid} className="apps-grid">
-          <div style={styles.appCard} className="app-card">
-            <PhoneMockup />
+        <div style={styles.beatGrid} className="beat-grid">
+          <div style={styles.beatText}>
+            <p style={styles.beatLabel}>iOS app</p>
+            <h2 style={styles.beatHeading}>Save from your phone</h2>
+            <p style={styles.beatBody}>
+              Found something worth keeping while you're out? Share it to Stem
+              from any app on your phone. It lands in the right stem, ready
+              for anyone following along.
+            </p>
             <div style={styles.appBadge}>App Store &mdash; Coming soon</div>
           </div>
-          <div style={styles.appCard} className="app-card">
-            <BrowserMockup />
+          <div className="beat-vis">
+            <PhoneMockup />
+          </div>
+        </div>
+      </section>
+
+      <WavyDivider />
+
+      {/* ── Beat: Chrome Extension ── */}
+      <section
+        ref={chromeRef}
+        style={{ ...styles.beatSection, opacity: chromeVis ? 1 : 0, transform: chromeVis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        className="beat-section"
+      >
+        <div style={styles.beatGrid} className="beat-grid beat-grid-flip">
+          <div style={styles.beatText}>
+            <p style={styles.beatLabel}>Chrome extension</p>
+            <h2 style={styles.beatHeading}>Save while you browse</h2>
+            <p style={styles.beatBody}>
+              One click saves any page to a stem. The extension pulls the
+              title and metadata automatically — just pick which stem it
+              belongs to.
+            </p>
             <div style={styles.appBadge}>Chrome Web Store &mdash; Coming soon</div>
+          </div>
+          <div className="beat-vis">
+            <BrowserMockup />
           </div>
         </div>
       </section>
@@ -689,14 +748,9 @@ const CSS_TEXT = `
     box-shadow: 0 4px 16px rgba(28, 26, 23, 0.08) !important;
   }
 
-  .app-card:hover {
-    border-color: var(--forest) !important;
-    box-shadow: 0 8px 24px rgba(28, 26, 23, 0.1) !important;
-  }
-
   .hero-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 60fr 40fr;
     gap: 60px;
     align-items: center;
   }
@@ -712,13 +766,6 @@ const CSS_TEXT = `
 
   .beat-grid-flip .beat-vis { order: -1; }
 
-  .apps-grid {
-    display: flex;
-    gap: 24px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
   @media (max-width: 600px) {
     .landing-headline { font-size: clamp(1.7rem, 7vw, 2.2rem) !important; }
     .landing-nav { padding: 16px 20px !important; }
@@ -730,7 +777,6 @@ const CSS_TEXT = `
     .beat-grid-flip .beat-vis { order: 0 !important; }
     .cta-section { padding: 60px 24px !important; }
     .landing-footer { padding: 20px 24px !important; }
-    .apps-grid { flex-direction: column; align-items: center; }
     .convergence-columns { grid-template-columns: 1fr !important; gap: 40px !important; }
   }
 `;
@@ -877,42 +923,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   beatGrid: {},
 
-  // Apps section
-  appsSection: {
-    padding: "80px 40px",
-    textAlign: "center" as const,
-  },
-  appsHeading: {
-    fontFamily: "'DM Serif Display', serif",
-    fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
-    lineHeight: 1.2,
-    color: "var(--ink)",
-    letterSpacing: "-0.01em",
-    marginBottom: 12,
-    marginTop: 12,
-  },
-  appsSubline: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 15,
-    color: "var(--ink-mid)",
-    lineHeight: 1.6,
-    marginBottom: 40,
-    maxWidth: 440,
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  appsGrid: {},
-  appCard: {
-    background: "var(--surface, var(--paper))",
-    border: "1px solid var(--paper-dark)",
-    borderRadius: 18,
-    padding: "32px 28px 24px",
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    gap: 20,
-    transition: "border-color 0.2s, box-shadow 0.2s",
-  },
+  // App badges
   appBadge: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 11,
@@ -920,6 +931,8 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--paper-mid)",
     borderRadius: 6,
     padding: "5px 12px",
+    marginTop: 20,
+    display: "inline-block",
   },
 
   // Typewriter

@@ -5,6 +5,13 @@ interface Find {
   domain: string;
 }
 
+export interface StemData {
+  emoji: string;
+  title: string;
+  author: string;
+  finds: Find[];
+}
+
 interface StemMockupProps {
   emoji?: string;
   title?: string;
@@ -15,39 +22,202 @@ interface StemMockupProps {
   contributors?: string[];
 }
 
-const DEFAULT_FINDS: Find[] = [
-  { title: "Hagia Sophia's pendentive dome, explained", domain: "archdaily.com" },
-  { title: "Why Justinian's mosaics still mesmerize", domain: "aeon.co" },
-  { title: "The lost churches of Constantinople", domain: "jstor.org" },
-  { title: "Byzantine influence on Islamic architecture", domain: "khanacademy.org" },
-  { title: "Reading the Theodosian Walls today", domain: "atlasobscura.com" },
+export const STEM_POOL: StemData[] = [
+  {
+    emoji: "🧠", title: "Cognitive science", author: "amrith",
+    finds: [
+      { title: "How memory consolidation actually works", domain: "nature.com" },
+      { title: "The predictive coding framework", domain: "aeon.co" },
+      { title: "Embodied cognition: a reading list", domain: "philpapers.org" },
+      { title: "The Default Mode Network, explained", domain: "sci.am" },
+      { title: "Against Behaviorism (Chomsky, 1959)", domain: "mit.edu" },
+    ],
+  },
+  {
+    emoji: "🏛️", title: "Byzantine architecture", author: "claudia",
+    finds: [
+      { title: "Hagia Sophia's pendentive dome, explained", domain: "archdaily.com" },
+      { title: "Why Justinian's mosaics still mesmerize", domain: "aeon.co" },
+      { title: "The lost churches of Constantinople", domain: "jstor.org" },
+      { title: "Byzantine influence on Islamic architecture", domain: "khanacademy.org" },
+      { title: "Reading the Theodosian Walls today", domain: "atlasobscura.com" },
+    ],
+  },
+  {
+    emoji: "🌿", title: "Urban foraging", author: "dan",
+    finds: [
+      { title: "A beginner's guide to wild garlic", domain: "theguardian.com" },
+      { title: "Foraging laws by state", domain: "forager.org" },
+      { title: "Edible weeds hiding in your backyard", domain: "atlasobscura.com" },
+      { title: "How to identify elderflower safely", domain: "woodlandtrust.org" },
+      { title: "City foraging: a photo essay", domain: "nytimes.com" },
+    ],
+  },
+  {
+    emoji: "🎬", title: "New wave cinema", author: "priya",
+    finds: [
+      { title: "Godard's jump cuts, deconstructed", domain: "criterion.com" },
+      { title: "The French New Wave manifesto", domain: "bfi.org.uk" },
+      { title: "Agnès Varda: the grandmother of the wave", domain: "mubi.com" },
+      { title: "Why Breathless still feels modern", domain: "rogerebert.com" },
+      { title: "New wave influences on Tarantino", domain: "vulture.com" },
+    ],
+  },
+  {
+    emoji: "🧬", title: "CRISPR explained", author: "alex",
+    finds: [
+      { title: "Gene editing: a visual guide", domain: "nature.com" },
+      { title: "The ethics of CRISPR babies", domain: "theatlantic.com" },
+      { title: "Jennifer Doudna's Nobel lecture", domain: "nobelprize.org" },
+      { title: "Base editing vs. prime editing", domain: "broadinstitute.org" },
+      { title: "CRISPR in agriculture: what's next", domain: "science.org" },
+    ],
+  },
+  {
+    emoji: "📐", title: "Bauhaus design", author: "mika",
+    finds: [
+      { title: "Form follows function: a history", domain: "dezeen.com" },
+      { title: "The Bauhaus school's lasting influence", domain: "moma.org" },
+      { title: "Kandinsky's color theory lectures", domain: "jstor.org" },
+      { title: "Bauhaus typography, then and now", domain: "typographica.org" },
+      { title: "Dessau campus: a walking tour", domain: "archdaily.com" },
+    ],
+  },
+  {
+    emoji: "🌊", title: "Deep sea exploration", author: "ray",
+    finds: [
+      { title: "Mapping the Mariana Trench", domain: "oceanexplorer.noaa.gov" },
+      { title: "Bioluminescence at 3,000 meters", domain: "nature.com" },
+      { title: "The Trieste dive: a firsthand account", domain: "smithsonianmag.com" },
+      { title: "Hydrothermal vents and the origin of life", domain: "science.org" },
+      { title: "Deep-sea gigantism explained", domain: "bbc.com" },
+    ],
+  },
+  {
+    emoji: "🎭", title: "Commedia dell'arte", author: "sofia",
+    finds: [
+      { title: "The stock characters explained", domain: "britannica.com" },
+      { title: "Harlequin's evolution through centuries", domain: "jstor.org" },
+      { title: "Improvisation techniques from the 1500s", domain: "theatrehistory.com" },
+      { title: "Commedia's influence on modern sketch comedy", domain: "newyorker.com" },
+      { title: "Masks and physicality: a workshop guide", domain: "dramaturgy.co" },
+    ],
+  },
+  {
+    emoji: "🔭", title: "Amateur astronomy", author: "neil",
+    finds: [
+      { title: "Your first telescope: a buying guide", domain: "skyandtelescope.org" },
+      { title: "Messier objects for beginners", domain: "nasa.gov" },
+      { title: "Astrophotography with a phone", domain: "petapixel.com" },
+      { title: "Light pollution maps and dark sky sites", domain: "darksitefinder.com" },
+      { title: "How to spot the ISS tonight", domain: "spaceweather.com" },
+    ],
+  },
+  {
+    emoji: "🍞", title: "Sourdough science", author: "mike",
+    finds: [
+      { title: "The microbiology of sourdough", domain: "nature.com" },
+      { title: "Why hydration percentage matters", domain: "theperfectloaf.com" },
+      { title: "Wild yeast vs. commercial yeast", domain: "seriouseats.com" },
+      { title: "A timeline of bread in civilization", domain: "smithsonianmag.com" },
+      { title: "Troubleshooting your starter", domain: "kingarthurbaking.com" },
+    ],
+  },
+  {
+    emoji: "📚", title: "Lost libraries of antiquity", author: "elena",
+    finds: [
+      { title: "The burning of Alexandria: myth vs. reality", domain: "jstor.org" },
+      { title: "Ashurbanipal's clay tablet library", domain: "britishmuseum.org" },
+      { title: "The House of Wisdom in Baghdad", domain: "aeon.co" },
+      { title: "Timbuktu manuscripts: a survival story", domain: "bbc.com" },
+      { title: "Digital reconstruction of lost texts", domain: "science.org" },
+    ],
+  },
+  {
+    emoji: "🎨", title: "Color theory in film", author: "lena",
+    finds: [
+      { title: "Wes Anderson's pastel palette decoded", domain: "criterion.com" },
+      { title: "How Spielberg uses red", domain: "nofilmschool.com" },
+      { title: "Color grading: orange and teal explained", domain: "wolfcrow.com" },
+      { title: "The Coen Brothers' desaturated Midwest", domain: "vulture.com" },
+      { title: "Technicolor's golden age", domain: "mubi.com" },
+    ],
+  },
+  {
+    emoji: "🦠", title: "Microbiome research", author: "sara",
+    finds: [
+      { title: "The gut-brain axis, explained", domain: "nature.com" },
+      { title: "How your microbiome shapes immunity", domain: "science.org" },
+      { title: "Fecal transplants: promise and peril", domain: "theatlantic.com" },
+      { title: "Soil microbiomes and plant health", domain: "newphytologist.org" },
+      { title: "Probiotics: what actually works?", domain: "examine.com" },
+    ],
+  },
+  {
+    emoji: "🗺️", title: "Cartography history", author: "marco",
+    finds: [
+      { title: "Ptolemy's world map and its legacy", domain: "britishmuseum.org" },
+      { title: "How medieval maps encoded power", domain: "aeon.co" },
+      { title: "Mercator's projection: useful lie", domain: "vox.com" },
+      { title: "Indigenous mapping traditions", domain: "jstor.org" },
+      { title: "The first satellite maps of Earth", domain: "nasa.gov" },
+    ],
+  },
+  {
+    emoji: "🎹", title: "Synth sound design", author: "yuki",
+    finds: [
+      { title: "Subtractive vs. FM synthesis", domain: "soundonsound.com" },
+      { title: "How the Moog changed everything", domain: "moogmusic.com" },
+      { title: "Designing a pad from scratch", domain: "youtube.com" },
+      { title: "Wavetable synthesis explained", domain: "reverb.com" },
+      { title: "Aphex Twin's gear list decoded", domain: "musicradar.com" },
+    ],
+  },
+  {
+    emoji: "🦴", title: "Paleoanthropology", author: "zara",
+    finds: [
+      { title: "Lucy and the Afar Triangle", domain: "smithsonianmag.com" },
+      { title: "Denisovans: the ghost lineage", domain: "nature.com" },
+      { title: "What teeth reveal about ancient diets", domain: "science.org" },
+      { title: "The Homo naledi cave discovery", domain: "nationalgeographic.com" },
+      { title: "When did humans start cooking?", domain: "sapiens.org" },
+    ],
+  },
 ];
+
+/** Pick `count` random non-repeating stems from the pool */
+export function pickRandomStems(count: number, exclude: string[] = []): StemData[] {
+  const available = STEM_POOL.filter((s) => !exclude.includes(s.title));
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 export function StemMockup({
   emoji = "🏛️",
   title = "Byzantine architecture",
   meta,
-  finds = DEFAULT_FINDS,
+  finds,
   animated = false,
   hoverable = false,
   contributors,
 }: StemMockupProps) {
-  const [visibleCount, setVisibleCount] = useState(animated ? 0 : finds.length);
+  const resolvedFinds = finds ?? STEM_POOL.find((s) => s.title === title)?.finds ?? STEM_POOL[0].finds;
+  const [visibleCount, setVisibleCount] = useState(animated ? 0 : resolvedFinds.length);
 
   useEffect(() => {
     if (!animated) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    finds.forEach((_, i) => {
+    resolvedFinds.forEach((_, i) => {
       timers.push(setTimeout(() => setVisibleCount(i + 1), 1200 + i * 400));
     });
     return () => timers.forEach(clearTimeout);
-  }, [animated, finds.length]);
+  }, [animated, resolvedFinds.length]);
 
   const metaText =
     meta ??
     (contributors
-      ? `${contributors.map((c) => `@${c}`).join(" + ")} · ${finds.length} finds`
-      : `@amrith · ${finds.length} finds · public`);
+      ? `${contributors.map((c) => `@${c}`).join(" + ")} · ${resolvedFinds.length} finds`
+      : `@amrith · ${resolvedFinds.length} finds · public`);
 
   return (
     <div style={s.wrap}>
@@ -71,7 +241,7 @@ export function StemMockup({
       )}
       <div style={s.rule} />
       <div style={s.findList}>
-        {finds.map((f, i) => (
+        {resolvedFinds.map((f, i) => (
           <div
             key={f.title}
             className={hoverable ? "landing-find-row" : undefined}
