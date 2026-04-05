@@ -34,6 +34,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   // Verify CSRF state
   const isMobile = state?.startsWith("mobile:");
+  const isSignup = state?.startsWith("signup:");
+  const signupUsername = isSignup ? state.split(":")[1] : null;
   const cookieHeader = request.headers.get("Cookie") || "";
   const stateCookie = cookieHeader.match(/google_oauth_state=([^;]+)/)?.[1];
   if (!code || !state || state !== stateCookie) {
@@ -102,6 +104,17 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       .prepare("SELECT username, invited_at FROM waitlist WHERE email = ? AND username IS NOT NULL")
       .bind(email)
       .first<{ username: string; invited_at: string | null }>();
+
+    // Landing page signup via Google: create waitlist entry with the reserved username
+    if (!waitlistEntry && signupUsername) {
+      await db
+        .prepare("INSERT OR IGNORE INTO waitlist (username, email, created_at) VALUES (?, ?, datetime('now'))")
+        .bind(signupUsername, email)
+        .run();
+      const em = encodeURIComponent(email);
+      const name = encodeURIComponent(googleUser.name || "");
+      throw redirect(`/waitlist?email=${em}&name=${name}`);
+    }
 
     if (!waitlistEntry || !waitlistEntry.invited_at) {
       const name = encodeURIComponent(googleUser.name || "");
