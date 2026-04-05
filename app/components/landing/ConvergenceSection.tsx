@@ -1,126 +1,149 @@
 import { useEffect, useRef, useState } from "react";
 
-interface SourceItem {
-  label: string;
-  detail: string;
-  icon: string;
-  scatterX: number;
-  scatterY: number;
-  rotation: number;
-}
+type Phase = "initial" | "doom" | "transitioning" | "stem";
 
-const SOURCES: SourceItem[] = [
-  { label: "nature.com", detail: "How memory consolidation works", icon: "🌐", scatterX: -140, scatterY: -80, rotation: -6 },
-  { label: "YouTube", detail: "The Default Mode Network", icon: "▶️", scatterX: 120, scatterY: -60, rotation: 4 },
-  { label: "Notes app", detail: "predictive coding → read more", icon: "📝", scatterX: -100, scatterY: 70, rotation: -3 },
-  { label: "@neurosci_daily", detail: "Saved bookmark", icon: "🐦", scatterX: 150, scatterY: 50, rotation: 5 },
-  { label: "Podcast", detail: "Ep 47: Embodied cognition", icon: "🎧", scatterX: -160, scatterY: 10, rotation: -4 },
-  { label: "Wikipedia", detail: "Chomsky's review of Skinner", icon: "📖", scatterX: 100, scatterY: -20, rotation: 3 },
+const DOOM_CARDS = [
+  { type: "hot-take", text: "Hot take: everything you know about this is wrong", metrics: "2.1K · 847 · 12K" },
+  { type: "outrage", text: "I can't believe people still think this in 2026", metrics: "938 · 412 · 5.6K" },
+  { type: "engagement", text: "Unpopular opinion thread 🧵👇", metrics: "1.4K · 623 · 8.2K" },
+  { type: "ragebait", text: "This might be the worst take I've ever seen", metrics: "3.2K · 1.1K · 15K" },
+  { type: "discourse", text: "We need to talk about what happened yesterday", metrics: "756 · 389 · 4.1K" },
 ];
 
-const CONVERGED_FINDS = [
-  { title: "How memory consolidation actually works", domain: "nature.com" },
-  { title: "The predictive coding framework", domain: "aeon.co" },
-  { title: "Embodied cognition: a reading list", domain: "philpapers.org" },
-  { title: "The Default Mode Network, explained", domain: "youtube.com" },
-  { title: "Against Behaviorism (Chomsky, 1959)", domain: "wikipedia.org" },
+const STEM_CARDS = [
+  { emoji: "🎵", title: "Jazz lineage", author: "@jamie", findCount: 12, topFind: "Miles Davis and the Birth of Cool" },
+  { emoji: "🌿", title: "Urban foraging", author: "@dan", findCount: 8, topFind: "A beginner's guide to wild garlic" },
+  { emoji: "🎬", title: "New wave cinema", author: "@priya", findCount: 15, topFind: "Godard's jump cuts, deconstructed" },
+  { emoji: "🏛️", title: "Byzantine architecture", author: "@claudia", findCount: 9, topFind: "Hagia Sophia's pendentive dome" },
+  { emoji: "🧪", title: "Fermentation science", author: "@mike", findCount: 6, topFind: "The microbiology of sourdough" },
 ];
 
 export function ConvergenceSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [converged, setConverged] = useState(false);
+  const [phase, setPhase] = useState<Phase>("initial");
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    // Check prefers-reduced-motion
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) {
-      setConverged(true);
+      setPhase("stem");
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setConverged(true);
+          setPhase("doom");
           observer.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.25 }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  // Mobile detection for smaller scatter
-  const isMobile = typeof window !== "undefined" && window.innerWidth <= 600;
-  const scatterScale = isMobile ? 0.5 : 1;
+  useEffect(() => {
+    if (phase === "doom") {
+      const t1 = setTimeout(() => setPhase("transitioning"), 2200);
+      return () => clearTimeout(t1);
+    }
+    if (phase === "transitioning") {
+      const t2 = setTimeout(() => setPhase("stem"), 800);
+      return () => clearTimeout(t2);
+    }
+  }, [phase]);
+
+  const showDoom = phase === "doom" || phase === "transitioning";
+  const showStem = phase === "stem";
 
   return (
     <section style={s.section}>
       <p style={s.label}>The problem</p>
-      <h2 style={s.heading}>Your curiosity is everywhere.<br />It doesn't have to be.</h2>
+      <h2 style={s.heading}>You know this scroll</h2>
 
       <div ref={sectionRef} style={s.arena}>
-        {/* Scattered sources */}
-        <div style={{ ...s.sourcesWrap, opacity: converged ? 0 : 1, pointerEvents: converged ? "none" : "auto" }}>
-          {SOURCES.map((src) => (
-            <div
-              key={src.label}
-              style={{
-                ...s.sourceCard,
-                transform: converged
-                  ? "translate(0, 0) rotate(0deg)"
-                  : `translate(${src.scatterX * scatterScale}px, ${src.scatterY * scatterScale}px) rotate(${src.rotation}deg)`,
-                opacity: converged ? 0 : 1,
-                transition: "transform 0.8s ease, opacity 0.6s ease",
-              }}
-            >
-              <span style={s.sourceIcon}>{src.icon}</span>
-              <div>
-                <p style={s.sourceLabel}>{src.label}</p>
-                <p style={s.sourceDetail}>{src.detail}</p>
+        {/* Doom feed */}
+        <div
+          style={{
+            ...s.feedColumn,
+            opacity: showDoom ? (phase === "transitioning" ? 0 : 1) : 0,
+            transform: showDoom
+              ? phase === "transitioning"
+                ? "translateX(-24px)"
+                : "translateX(0)"
+              : "translateX(-24px)",
+            filter: phase === "transitioning" ? "blur(4px)" : "none",
+            transition: "opacity 0.6s ease, transform 0.6s ease, filter 0.4s ease",
+            pointerEvents: "none",
+          }}
+          className="doom-feed"
+        >
+          {DOOM_CARDS.map((card, i) => (
+            <div key={i} style={s.doomCard}>
+              <div style={s.doomAvatar} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={s.doomText}>{card.text}</p>
+                <p style={s.doomMetrics}>
+                  <span style={s.doomMetricReply}>💬</span>
+                  <span style={s.doomMetricRT}>🔁</span>
+                  <span style={s.doomMetricHeart}>❤️</span>
+                  <span style={s.doomMetricNum}>{card.metrics}</span>
+                </p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Converged stem card */}
+        {/* Stem feed */}
         <div
           style={{
-            ...s.stemCard,
-            opacity: converged ? 1 : 0,
-            transform: converged ? "translateY(0)" : "translateY(16px)",
-            transition: "opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s",
+            ...s.feedColumn,
+            opacity: showStem ? 1 : 0,
+            transform: showStem ? "translateX(0)" : "translateX(24px)",
+            transition: "opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s",
+            pointerEvents: showStem ? "auto" : "none",
+            position: showDoom ? "absolute" : "relative",
           }}
+          className="stem-feed"
         >
-          <div style={s.stemTop}>
-            <span style={{ fontSize: 32, lineHeight: 1 }}>🧠</span>
-            <div>
-              <p style={s.stemTitle}>Cognitive science</p>
-              <p style={s.stemMeta}>@amrith · 5 finds · public</p>
-            </div>
-          </div>
-          <div style={s.stemRule} />
-          {CONVERGED_FINDS.map((f) => (
-            <div key={f.title} style={s.stemFind}>
-              <span style={s.stemFindTitle}>{f.title}</span>
-              <span style={s.stemFindDomain}>{f.domain}</span>
+          {STEM_CARDS.map((card, i) => (
+            <div key={i} style={s.stemCard}>
+              <div style={s.stemTop}>
+                <span style={s.stemEmoji}>{card.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={s.stemTitle}>{card.title}</p>
+                  <p style={s.stemMeta}>{card.author} · {card.findCount} finds</p>
+                </div>
+              </div>
+              <p style={s.stemFind}>{card.topFind}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Subheading after transition */}
+      <p
+        style={{
+          ...s.subheading,
+          opacity: showStem ? 1 : 0,
+          transform: showStem ? "translateY(0)" : "translateY(8px)",
+          transition: "opacity 0.5s ease 0.3s, transform 0.5s ease 0.3s",
+        }}
+      >
+        What if it felt like this instead?
+      </p>
     </section>
   );
 }
 
 const s: Record<string, React.CSSProperties> = {
   section: {
-    maxWidth: 860,
+    maxWidth: 520,
     margin: "0 auto",
-    padding: "80px 40px 100px",
+    padding: "80px 40px 60px",
     textAlign: "center",
   },
   label: {
@@ -137,94 +160,106 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1.18,
     color: "var(--ink)",
     letterSpacing: "-0.01em",
-    marginBottom: 60,
+    marginBottom: 48,
+  },
+  subheading: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+    color: "var(--ink-mid)",
+    marginTop: 32,
+    fontStyle: "italic",
   },
   arena: {
     position: "relative",
-    minHeight: 380,
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "flex-start",
+    minHeight: 340,
   },
-  sourcesWrap: {
-    position: "absolute",
-    inset: 0,
+  feedColumn: {
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    transition: "opacity 0.5s ease",
+    flexDirection: "column",
+    gap: 10,
+    width: "100%",
+    maxWidth: 420,
   },
-  sourceCard: {
-    position: "absolute",
+
+  // Doom cards
+  doomCard: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     background: "var(--surface, var(--paper))",
     border: "1px solid var(--paper-dark)",
     borderRadius: 12,
-    padding: "10px 16px",
-    boxShadow: "0 4px 16px rgba(28, 26, 23, 0.06)",
-    whiteSpace: "nowrap",
+    padding: "12px 14px",
+    textAlign: "left",
   },
-  sourceIcon: { fontSize: 18, flexShrink: 0 },
-  sourceLabel: {
+  doomAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    background: "var(--paper-dark)",
+    flexShrink: 0,
+  },
+  doomText: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 12,
-    fontWeight: 600,
     color: "var(--ink)",
-    lineHeight: 1.2,
+    lineHeight: 1.4,
+    marginBottom: 6,
   },
-  sourceDetail: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 10,
+  doomMetrics: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 9,
     color: "var(--ink-light)",
-    marginTop: 1,
   },
+  doomMetricReply: { fontSize: 8 },
+  doomMetricRT: { fontSize: 8 },
+  doomMetricHeart: { fontSize: 8 },
+  doomMetricNum: { fontSize: 9, color: "var(--ink-light)" },
+
+  // Stem cards
   stemCard: {
     background: "var(--surface, var(--paper))",
     border: "1px solid var(--paper-dark)",
-    borderRadius: 18,
-    padding: 24,
-    boxShadow: "0 8px 32px rgba(28, 26, 23, 0.08)",
-    maxWidth: 400,
-    width: "100%",
+    borderRadius: 14,
+    padding: "14px 16px",
     textAlign: "left",
   },
-  stemTop: { display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 },
+  stemTop: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  stemEmoji: {
+    fontSize: 22,
+    lineHeight: 1,
+    flexShrink: 0,
+  },
   stemTitle: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: 18,
+    fontSize: 14,
     color: "var(--ink)",
     lineHeight: 1.2,
   },
   stemMeta: {
     fontFamily: "'DM Mono', monospace",
-    fontSize: 10,
+    fontSize: 9,
     color: "var(--ink-light)",
-    marginTop: 4,
+    marginTop: 2,
   },
-  stemRule: { height: 1, background: "var(--paper-dark)", marginBottom: 12 },
   stemFind: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 8,
-    padding: "3px 0",
-  },
-  stemFindTitle: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 12,
-    color: "var(--ink)",
-    flex: 1,
-    minWidth: 0,
+    fontSize: 11,
+    color: "var(--ink-mid)",
+    paddingLeft: 32,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-  },
-  stemFindDomain: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 9,
-    color: "var(--ink-light)",
-    flexShrink: 0,
   },
 };

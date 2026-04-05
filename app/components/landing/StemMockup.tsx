@@ -16,16 +16,16 @@ interface StemMockupProps {
 }
 
 const DEFAULT_FINDS: Find[] = [
-  { title: "How memory consolidation actually works", domain: "nature.com" },
-  { title: "The predictive coding framework", domain: "aeon.co" },
-  { title: "Embodied cognition: a reading list", domain: "philpapers.org" },
-  { title: "The Default Mode Network, explained", domain: "sci.am" },
-  { title: "Against Behaviorism (Chomsky, 1959)", domain: "mit.edu" },
+  { title: "Hagia Sophia's pendentive dome, explained", domain: "archdaily.com" },
+  { title: "Why Justinian's mosaics still mesmerize", domain: "aeon.co" },
+  { title: "The lost churches of Constantinople", domain: "jstor.org" },
+  { title: "Byzantine influence on Islamic architecture", domain: "khanacademy.org" },
+  { title: "Reading the Theodosian Walls today", domain: "atlasobscura.com" },
 ];
 
 export function StemMockup({
-  emoji = "🧠",
-  title = "Cognitive science",
+  emoji = "🏛️",
+  title = "Byzantine architecture",
   meta,
   finds = DEFAULT_FINDS,
   animated = false,
@@ -99,6 +99,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: 28,
     boxShadow: "0 8px 32px rgba(28, 26, 23, 0.08)",
     width: "100%",
+    maxWidth: 360,
     boxSizing: "border-box",
   },
   top: { display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 20 },

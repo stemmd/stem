@@ -93,46 +93,125 @@ const NOISE_BG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='ht
 
 function PhoneMockup() {
   return (
-    <svg viewBox="0 0 160 280" fill="none" style={{ width: 120, height: "auto" }}>
-      <rect x="4" y="4" width="152" height="272" rx="20" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
-      <rect x="56" y="12" width="48" height="6" rx="3" fill="var(--paper-dark)" />
-      <rect x="20" y="40" width="120" height="1" fill="var(--paper-dark)" />
-      {/* Share sheet mockup */}
-      <rect x="20" y="140" width="120" height="100" rx="10" fill="var(--paper-mid)" stroke="var(--paper-dark)" strokeWidth="1" />
-      <text x="40" y="162" fontFamily="DM Sans" fontSize="8" fill="var(--ink-mid)">Share via...</text>
-      <rect x="30" y="172" width="100" height="20" rx="6" fill="var(--forest)" />
-      <text x="52" y="186" fontFamily="DM Sans" fontSize="8" fill="white" fontWeight="500">Save to Stem</text>
-      <rect x="30" y="200" width="100" height="20" rx="6" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
-      <text x="56" y="214" fontFamily="DM Sans" fontSize="8" fill="var(--ink-mid)">Copy Link</text>
+    <svg viewBox="0 0 180 360" fill="none" style={{ width: 180, height: "auto" }}>
+      {/* Phone frame */}
+      <rect x="4" y="4" width="172" height="352" rx="24" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
+      {/* Dynamic island */}
+      <rect x="64" y="12" width="52" height="8" rx="4" fill="var(--paper-dark)" />
+      {/* Status bar */}
+      <text x="16" y="32" fontFamily="DM Sans" fontSize="7" fontWeight="600" fill="var(--ink-mid)">9:41</text>
+      <circle cx="148" cy="28" r="2" fill="var(--ink-mid)" />
+      <circle cx="155" cy="28" r="2" fill="var(--ink-mid)" />
+      <circle cx="162" cy="28" r="2" fill="var(--ink-mid)" />
+
+      {/* Screen content — stem detail view */}
+      <rect x="16" y="44" width="148" height="1" fill="var(--paper-dark)" />
+      {/* Back arrow + header */}
+      <text x="16" y="62" fontFamily="DM Sans" fontSize="8" fill="var(--forest)">‹ Back</text>
+      {/* Stem header */}
+      <text x="24" y="86" fontSize="22">🎵</text>
+      <text x="50" y="82" fontFamily="DM Serif Display" fontSize="12" fill="var(--ink)">Jazz lineage</text>
+      <text x="50" y="94" fontFamily="DM Mono" fontSize="6" fill="var(--ink-light)">@amrith + @jamie · 4 finds</text>
+      <rect x="16" y="104" width="148" height="1" fill="var(--paper-dark)" />
+
+      {/* Find rows */}
+      <text x="24" y="120" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">Miles Davis and the Birth of Cool</text>
+      <text x="24" y="130" fontFamily="DM Mono" fontSize="5.5" fill="var(--ink-light)">npr.org</text>
+
+      <text x="24" y="148" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">The Anatomy of a Jazz Standard</text>
+      <text x="24" y="158" fontFamily="DM Mono" fontSize="5.5" fill="var(--ink-light)">jstor.org</text>
+
+      <text x="24" y="176" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">How Coltrane changed harmony</text>
+      <text x="24" y="186" fontFamily="DM Mono" fontSize="5.5" fill="var(--ink-light)">nytimes.com</text>
+
+      <text x="24" y="204" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">Blue Note Records: a visual history</text>
+      <text x="24" y="214" fontFamily="DM Mono" fontSize="5.5" fill="var(--ink-light)">design.blog</text>
+
+      {/* Share sheet overlay */}
+      <rect x="8" y="240" width="164" height="108" rx="14" fill="var(--paper-mid)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <rect x="74" y="244" width="32" height="3" rx="1.5" fill="var(--paper-dark)" />
+      <text x="24" y="264" fontFamily="DM Sans" fontSize="8" fontWeight="500" fill="var(--ink)">Share via</text>
+      {/* Share icons row */}
+      <circle cx="36" cy="282" r="12" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <text x="31" y="285" fontSize="8">💬</text>
+      <circle cx="68" cy="282" r="12" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <text x="63" y="285" fontSize="8">📋</text>
+      <circle cx="100" cy="282" r="12" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <text x="95" y="285" fontSize="8">📧</text>
+      <circle cx="132" cy="282" r="12" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <text x="127" y="285" fontSize="8">⋯</text>
+      {/* Save to Stem button */}
+      <rect x="20" y="304" width="140" height="28" rx="8" fill="var(--forest)" />
+      <text x="55" y="322" fontFamily="DM Sans" fontSize="9" fill="white" fontWeight="500">Save to Stem</text>
+
+      {/* FAB */}
+      <circle cx="148" cy="228" r="14" fill="var(--forest)" />
+      <text x="144" y="233" fontFamily="DM Sans" fontSize="16" fill="white" fontWeight="300">+</text>
+
+      {/* Home indicator */}
+      <rect x="64" y="348" width="52" height="3" rx="1.5" fill="var(--paper-dark)" />
     </svg>
   );
 }
 
 function BrowserMockup() {
   return (
-    <svg viewBox="0 0 220 160" fill="none" style={{ width: 180, height: "auto" }}>
+    <svg viewBox="0 0 360 240" fill="none" style={{ width: 320, height: "auto" }}>
       {/* Browser frame */}
-      <rect x="2" y="2" width="216" height="156" rx="8" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
-      {/* Tab bar */}
-      <rect x="2" y="2" width="216" height="28" rx="8" fill="var(--paper-mid)" />
-      <rect x="2" y="22" width="216" height="8" fill="var(--paper-mid)" />
-      {/* Dots */}
-      <circle cx="16" cy="16" r="4" fill="var(--paper-dark)" />
-      <circle cx="28" cy="16" r="4" fill="var(--paper-dark)" />
-      <circle cx="40" cy="16" r="4" fill="var(--paper-dark)" />
-      {/* URL bar */}
-      <rect x="56" y="9" width="100" height="14" rx="4" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
-      {/* Extension popup */}
-      <rect x="120" y="36" width="90" height="110" rx="8" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
-      <text x="132" y="54" fontFamily="DM Serif Display" fontSize="9" fill="var(--ink)">Save to Stem</text>
-      <rect x="130" y="62" width="70" height="1" fill="var(--paper-dark)" />
-      <text x="132" y="78" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Choose a stem:</text>
-      <rect x="130" y="84" width="70" height="16" rx="4" fill="var(--paper-mid)" stroke="var(--paper-dark)" strokeWidth="0.5" />
-      <text x="136" y="95" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">🧠 Cognitive science</text>
-      <rect x="130" y="104" width="70" height="16" rx="4" fill="var(--paper-mid)" stroke="var(--paper-dark)" strokeWidth="0.5" />
-      <text x="136" y="115" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">🎵 Jazz lineage</text>
-      <rect x="130" y="126" width="70" height="16" rx="4" fill="var(--forest)" />
-      <text x="150" y="137" fontFamily="DM Sans" fontSize="7" fill="white" fontWeight="500">Save</text>
+      <rect x="2" y="2" width="356" height="236" rx="10" stroke="var(--ink-light)" strokeWidth="2" fill="var(--surface, var(--paper))" />
+      {/* Title bar */}
+      <rect x="2" y="2" width="356" height="32" rx="10" fill="var(--paper-mid)" />
+      <rect x="2" y="24" width="356" height="10" fill="var(--paper-mid)" />
+      {/* Window dots */}
+      <circle cx="18" cy="18" r="4.5" fill="#FF5F57" />
+      <circle cx="32" cy="18" r="4.5" fill="#FEBC2E" />
+      <circle cx="46" cy="18" r="4.5" fill="#28C840" />
+      {/* Tab */}
+      <rect x="62" y="6" width="100" height="22" rx="6" fill="var(--paper)" />
+      <text x="72" y="21" fontFamily="DM Sans" fontSize="8" fill="var(--ink-mid)">Urban foraging guide...</text>
+      {/* Address bar */}
+      <rect x="12" y="38" width="336" height="20" rx="6" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1" />
+      <text x="24" y="51" fontFamily="DM Mono" fontSize="7" fill="var(--ink-light)">🔒 example.com/urban-foraging-beginners-guide</text>
+      {/* Stem extension icon in toolbar */}
+      <rect x="328" y="40" width="14" height="14" rx="3" fill="var(--forest)" />
+      <text x="330" y="51" fontFamily="DM Sans" fontSize="8" fill="white">S</text>
+
+      {/* Page content — article-like */}
+      <rect x="24" y="72" width="180" height="10" rx="2" fill="var(--paper-dark)" opacity="0.5" />
+      <rect x="24" y="88" width="280" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="98" width="260" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="108" width="240" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="118" width="200" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="134" width="270" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="144" width="250" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+      <rect x="24" y="154" width="220" height="6" rx="2" fill="var(--paper-dark)" opacity="0.25" />
+
+      {/* Extension popup overlay */}
+      <rect x="210" y="60" width="138" height="168" rx="10" fill="var(--paper)" stroke="var(--paper-dark)" strokeWidth="1.5">
+      </rect>
+      <g>
+        {/* Popup header */}
+        <text x="226" y="82" fontFamily="DM Serif Display" fontSize="11" fill="var(--ink)">Save to Stem</text>
+        <rect x="222" y="90" width="114" height="1" fill="var(--paper-dark)" />
+
+        {/* Current page preview */}
+        <text x="226" y="108" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Saving this page:</text>
+        <rect x="222" y="114" width="114" height="22" rx="4" fill="var(--paper-mid)" />
+        <text x="228" y="128" fontFamily="DM Sans" fontSize="7" fill="var(--ink)">Urban foraging beginners guide</text>
+
+        {/* Choose stem */}
+        <text x="226" y="152" fontFamily="DM Sans" fontSize="7" fill="var(--ink-mid)">Choose a stem:</text>
+        <rect x="222" y="158" width="114" height="18" rx="4" fill="var(--paper-mid)" stroke="var(--forest)" strokeWidth="1" />
+        <text x="228" y="170" fontFamily="DM Sans" fontSize="8" fill="var(--ink)">🌿 Urban foraging</text>
+        <text x="324" y="170" fontFamily="DM Sans" fontSize="7" fill="var(--ink-light)">▾</text>
+
+        {/* Save button */}
+        <rect x="222" y="186" width="114" height="26" rx="6" fill="var(--forest)" />
+        <text x="258" y="203" fontFamily="DM Sans" fontSize="9" fill="white" fontWeight="500">Save find</text>
+
+        {/* Success check hint */}
+        <text x="226" y="222" fontFamily="DM Mono" fontSize="6" fill="var(--forest)">✓ Saved to Urban foraging</text>
+      </g>
     </svg>
   );
 }
@@ -361,7 +440,7 @@ export default function Home() {
       {/* ── Beat 1: Your stems ── */}
       <section
         ref={beat1Ref}
-        style={{ ...styles.beatSection, backgroundImage: NOISE_BG, opacity: beat1Vis ? 1 : 0, transform: beat1Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, opacity: beat1Vis ? 1 : 0, transform: beat1Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
@@ -410,7 +489,7 @@ export default function Home() {
       {/* ── Beat 3: Branches ── */}
       <section
         ref={beat3Ref}
-        style={{ ...styles.beatSection, backgroundImage: NOISE_BG, opacity: beat3Vis ? 1 : 0, transform: beat3Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+        style={{ ...styles.beatSection, opacity: beat3Vis ? 1 : 0, transform: beat3Vis ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         className="beat-section"
       >
         <div style={styles.beatGrid} className="beat-grid">
@@ -425,7 +504,7 @@ export default function Home() {
           </div>
           <div className="beat-vis">
             <StemMockup
-              emoji="\uD83C\uDFB5"
+              emoji="🎵"
               title="Jazz lineage"
               contributors={["amrith", "jamie"]}
               finds={[
@@ -617,7 +696,7 @@ const CSS_TEXT = `
 
   .hero-grid {
     display: grid;
-    grid-template-columns: 45fr 55fr;
+    grid-template-columns: 1fr 1fr;
     gap: 60px;
     align-items: center;
   }
@@ -832,7 +911,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 20,
     transition: "border-color 0.2s, box-shadow 0.2s",
-    width: 260,
   },
   appBadge: {
     fontFamily: "'DM Mono', monospace",
@@ -845,8 +923,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Typewriter
   typewriterSection: {
-    padding: "40px 40px 80px",
-    borderTop: "1px solid var(--paper-dark)",
+    padding: "60px 40px",
     maxWidth: 860,
     margin: "0 auto",
     width: "100%",
