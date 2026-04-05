@@ -6,7 +6,7 @@ import { json } from "@remix-run/cloudflare";
 import { Form, Link, useLoaderData } from "@remix-run/react";
 import { requireAdmin } from "~/lib/auth.server";
 
-interface FindRow {
+interface ArtifactRow {
   id: string;
   url: string;
   title: string | null;
@@ -21,10 +21,10 @@ interface FindRow {
 
 interface ReportRow {
   id: number;
-  find_id: string;
+  artifact_id: string;
   reported_by_username: string;
-  find_title: string | null;
-  find_url: string;
+  artifact_title: string | null;
+  artifact_url: string;
   reason: string | null;
   created_at: string;
   resolved_at: string | null;
@@ -34,33 +34,33 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   await requireAdmin(request, context);
   const db = context.cloudflare.env.DB;
 
-  const [findsResult, reportsResult] = await Promise.all([
+  const [artifactsResult, reportsResult] = await Promise.all([
     db.prepare(`
       SELECT f.id, f.url, f.title, f.note, f.status, f.created_at,
              u.username as added_by_username,
              s.title as stem_title, s.slug as stem_slug,
              su.username as stem_username
-      FROM finds f
+      FROM artifacts f
       JOIN users u ON u.id = f.added_by
       JOIN stems s ON s.id = f.stem_id
       JOIN users su ON su.id = s.user_id
       ORDER BY f.created_at DESC
       LIMIT 100
-    `).all<FindRow>(),
+    `).all<ArtifactRow>(),
     db.prepare(`
-      SELECT r.id, r.find_id, r.reason, r.created_at, r.resolved_at,
+      SELECT r.id, r.artifact_id, r.reason, r.created_at, r.resolved_at,
              u.username as reported_by_username,
-             f.title as find_title, f.url as find_url
+             f.title as artifact_title, f.url as artifact_url
       FROM reports r
       JOIN users u ON u.id = r.reported_by
-      JOIN finds f ON f.id = r.find_id
+      JOIN artifacts f ON f.id = r.artifact_id
       WHERE r.resolved_at IS NULL
       ORDER BY r.created_at DESC
       LIMIT 50
     `).all<ReportRow>(),
   ]);
 
-  return json({ finds: findsResult.results ?? [], reports: reportsResult.results ?? [] });
+  return json({ artifacts: artifactsResult.results ?? [], reports: reportsResult.results ?? [] });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -77,12 +77,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return json({ success: true });
   }
 
-  if (intent === "delete_find") {
-    const findId = form.get("findId") as string;
-    if (!findId) return json({ error: "Missing findId" }, { status: 400 });
+  if (intent === "delete_artifact") {
+    const artifactId = form.get("artifactId") as string;
+    if (!artifactId) return json({ error: "Missing artifactId" }, { status: 400 });
 
-    await context.cloudflare.env.DB.prepare("DELETE FROM finds WHERE id = ?")
-      .bind(findId)
+    await context.cloudflare.env.DB.prepare("DELETE FROM artifacts WHERE id = ?")
+      .bind(artifactId)
       .run();
 
     return json({ ok: true });
@@ -102,7 +102,7 @@ function truncateUrl(url: string, max = 50): string {
 }
 
 export default function AdminContent() {
-  const { finds, reports } = useLoaderData<typeof loader>();
+  const { artifacts, reports } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -115,7 +115,7 @@ export default function AdminContent() {
             {reports.map((r) => (
               <div key={r.id} style={{ ...styles.card, borderColor: "var(--taken)", borderLeftWidth: 3 }}>
                 <div style={styles.cardHeader}>
-                  <span style={styles.cardTitle}>{r.find_title || r.find_url}</span>
+                  <span style={styles.cardTitle}>{r.artifact_title || r.artifact_url}</span>
                 </div>
                 <p style={styles.cardMeta}>
                   Reported by @{r.reported_by_username} · {new Date(r.created_at + "Z").toLocaleDateString()}
@@ -128,9 +128,9 @@ export default function AdminContent() {
                     <button type="submit" style={styles.resolveBtn}>Dismiss</button>
                   </Form>
                   <Form method="post" style={{ display: "inline" }}>
-                    <input type="hidden" name="intent" value="delete_find" />
-                    <input type="hidden" name="findId" value={r.find_id} />
-                    <button type="submit" style={styles.deleteBtn}>Delete find</button>
+                    <input type="hidden" name="intent" value="delete_artifact" />
+                    <input type="hidden" name="artifactId" value={r.artifact_id} />
+                    <button type="submit" style={styles.deleteBtn}>Delete artifact</button>
                   </Form>
                 </div>
               </div>
@@ -140,22 +140,22 @@ export default function AdminContent() {
       )}
 
       <h1 style={styles.heading}>Recent Content</h1>
-      <p style={styles.subtitle}>{finds.length} finds (most recent 100)</p>
+      <p style={styles.subtitle}>{artifacts.length} artifacts (most recent 100)</p>
 
       <div style={styles.list}>
-        {finds.map((find) => (
-          <div key={find.id} style={styles.card}>
+        {artifacts.map((artifact) => (
+          <div key={artifact.id} style={styles.card}>
             <div style={styles.cardHeader}>
               <div style={styles.cardTitle}>
-                {find.title || "Untitled"}
+                {artifact.title || "Untitled"}
               </div>
               <Form method="post" style={{ margin: 0 }}>
-                <input type="hidden" name="intent" value="delete_find" />
-                <input type="hidden" name="findId" value={find.id} />
+                <input type="hidden" name="intent" value="delete_artifact" />
+                <input type="hidden" name="artifactId" value={artifact.id} />
                 <button
                   type="submit"
                   onClick={(e) => {
-                    if (!confirm(`Delete this find?`)) {
+                    if (!confirm(`Delete this artifact?`)) {
                       e.preventDefault();
                     }
                   }}
@@ -167,42 +167,42 @@ export default function AdminContent() {
             </div>
 
             <a
-              href={find.url}
+              href={artifact.url}
               target="_blank"
               rel="noopener noreferrer"
               style={styles.url}
             >
-              {truncateUrl(find.url)}
+              {truncateUrl(artifact.url)}
             </a>
 
-            {find.note && (
-              <p style={styles.note}>{find.note}</p>
+            {artifact.note && (
+              <p style={styles.note}>{artifact.note}</p>
             )}
 
             <div style={styles.meta}>
               <span>
                 Added by{" "}
-                <Link to={`/${find.added_by_username}`} style={styles.metaLink}>
-                  @{find.added_by_username}
+                <Link to={`/${artifact.added_by_username}`} style={styles.metaLink}>
+                  @{artifact.added_by_username}
                 </Link>
               </span>
               <span style={styles.metaSep}>·</span>
               <span>
                 to{" "}
                 <Link
-                  to={`/${find.stem_username}/${find.stem_slug}`}
+                  to={`/${artifact.stem_username}/${artifact.stem_slug}`}
                   style={styles.metaLink}
                 >
-                  {find.stem_title}
+                  {artifact.stem_title}
                 </Link>
                 {" "}by{" "}
-                <Link to={`/${find.stem_username}`} style={styles.metaLink}>
-                  @{find.stem_username}
+                <Link to={`/${artifact.stem_username}`} style={styles.metaLink}>
+                  @{artifact.stem_username}
                 </Link>
               </span>
               <span style={styles.metaSep}>·</span>
               <span style={styles.mono}>
-                {new Date(find.created_at).toLocaleDateString("en-US", {
+                {new Date(artifact.created_at).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",

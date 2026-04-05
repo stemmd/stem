@@ -57,7 +57,7 @@ interface ProfileStem {
   description: string | null;
   emoji: string | null;
   updated_at: string;
-  find_count: number;
+  artifact_count: number;
   visibility: string;
 }
 
@@ -97,7 +97,7 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
     db
       .prepare(`
         SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at, s.visibility,
-               (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count
+               (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count
         FROM stems s
         WHERE s.user_id = ? AND ${stemVisibilityFilter(user?.id ?? null).sql}
         ORDER BY s.updated_at DESC
@@ -394,7 +394,7 @@ export default function UserProfile() {
                       title={stem.title}
                       emoji={stem.emoji ?? undefined}
                       description={stem.description}
-                      findCount={stem.find_count}
+                      artifactCount={stem.artifact_count}
                       visibility={stem.visibility as "public" | "mutuals" | "private"}
                       categoryTint={getCategoryTint(section.categoryId)}
                     />

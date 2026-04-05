@@ -11,7 +11,7 @@ interface UserRow {
   avatar_url: string | null;
   created_at: string;
   stem_count: number;
-  find_count: number;
+  artifact_count: number;
 }
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
@@ -20,7 +20,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const { results } = await context.cloudflare.env.DB.prepare(`
     SELECT u.id, u.username, u.display_name, u.email, u.avatar_url, u.created_at,
            (SELECT COUNT(*) FROM stems WHERE user_id = u.id) as stem_count,
-           (SELECT COUNT(*) FROM finds WHERE added_by = u.id) as find_count
+           (SELECT COUNT(*) FROM artifacts WHERE added_by = u.id) as artifact_count
     FROM users u
     ORDER BY u.created_at DESC
   `).all<UserRow>();
@@ -44,7 +44,7 @@ export default function AdminUsers() {
               <th style={styles.th}>Display Name</th>
               <th style={styles.th}>Email</th>
               <th style={{ ...styles.th, textAlign: "right" }}>Stems</th>
-              <th style={{ ...styles.th, textAlign: "right" }}>Finds</th>
+              <th style={{ ...styles.th, textAlign: "right" }}>Artifacts</th>
               <th style={styles.th}>Joined</th>
             </tr>
           </thead>
@@ -64,7 +64,7 @@ export default function AdminUsers() {
                   {user.stem_count}
                 </td>
                 <td style={{ ...styles.td, textAlign: "right", ...styles.mono }}>
-                  {user.find_count}
+                  {user.artifact_count}
                 </td>
                 <td style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
                   {new Date(user.created_at).toLocaleDateString("en-US", {

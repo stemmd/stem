@@ -13,7 +13,7 @@ export interface YouTubeEntry {
   time: string;
 }
 
-export interface ProposedFind {
+export interface ProposedArtifact {
   url: string;
   title: string;
   source_type: "youtube";
@@ -28,7 +28,7 @@ export interface ProposedStem {
   emoji: string;
   categoryId: string;
   visibility: "public";
-  finds: ProposedFind[];
+  artifacts: ProposedArtifact[];
   channelUrl?: string;
   selected: boolean;
 }
@@ -155,7 +155,7 @@ export function parseYouTubeHistory(entries: YouTubeEntry[]): ProposedStem[] {
       visibility: "public",
       channelUrl: ch.url,
       selected: true,
-      finds: ch.videos.map((v) => ({
+      artifacts: ch.videos.map((v) => ({
         url: v.url,
         title: v.title,
         source_type: "youtube" as const,

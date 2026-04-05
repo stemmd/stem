@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-interface Find {
+interface Artifact {
   title: string;
   domain: string;
 }
@@ -9,14 +9,14 @@ export interface StemData {
   emoji: string;
   title: string;
   author: string;
-  finds: Find[];
+  artifacts: Artifact[];
 }
 
 interface StemMockupProps {
   emoji?: string;
   title?: string;
   meta?: string;
-  finds?: Find[];
+  artifacts?: Artifact[];
   animated?: boolean;
   hoverable?: boolean;
   contributors?: string[];
@@ -25,7 +25,7 @@ interface StemMockupProps {
 export const STEM_POOL: StemData[] = [
   {
     emoji: "🧠", title: "Cognitive science", author: "amrith",
-    finds: [
+    artifacts: [
       { title: "How memory consolidation actually works", domain: "nature.com" },
       { title: "The predictive coding framework", domain: "aeon.co" },
       { title: "Embodied cognition: a reading list", domain: "philpapers.org" },
@@ -35,7 +35,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🏛️", title: "Byzantine architecture", author: "claudia",
-    finds: [
+    artifacts: [
       { title: "Hagia Sophia's pendentive dome, explained", domain: "archdaily.com" },
       { title: "Why Justinian's mosaics still mesmerize", domain: "aeon.co" },
       { title: "The lost churches of Constantinople", domain: "jstor.org" },
@@ -45,7 +45,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🌿", title: "Urban foraging", author: "dan",
-    finds: [
+    artifacts: [
       { title: "A beginner's guide to wild garlic", domain: "theguardian.com" },
       { title: "Foraging laws by state", domain: "forager.org" },
       { title: "Edible weeds hiding in your backyard", domain: "atlasobscura.com" },
@@ -55,7 +55,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🎬", title: "New wave cinema", author: "priya",
-    finds: [
+    artifacts: [
       { title: "Godard's jump cuts, deconstructed", domain: "criterion.com" },
       { title: "The French New Wave manifesto", domain: "bfi.org.uk" },
       { title: "Agnès Varda: the grandmother of the wave", domain: "mubi.com" },
@@ -65,7 +65,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🧬", title: "CRISPR explained", author: "alex",
-    finds: [
+    artifacts: [
       { title: "Gene editing: a visual guide", domain: "nature.com" },
       { title: "The ethics of CRISPR babies", domain: "theatlantic.com" },
       { title: "Jennifer Doudna's Nobel lecture", domain: "nobelprize.org" },
@@ -75,7 +75,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "📐", title: "Bauhaus design", author: "mika",
-    finds: [
+    artifacts: [
       { title: "Form follows function: a history", domain: "dezeen.com" },
       { title: "The Bauhaus school's lasting influence", domain: "moma.org" },
       { title: "Kandinsky's color theory lectures", domain: "jstor.org" },
@@ -85,7 +85,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🌊", title: "Deep sea exploration", author: "ray",
-    finds: [
+    artifacts: [
       { title: "Mapping the Mariana Trench", domain: "oceanexplorer.noaa.gov" },
       { title: "Bioluminescence at 3,000 meters", domain: "nature.com" },
       { title: "The Trieste dive: a firsthand account", domain: "smithsonianmag.com" },
@@ -95,7 +95,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🎭", title: "Commedia dell'arte", author: "sofia",
-    finds: [
+    artifacts: [
       { title: "The stock characters explained", domain: "britannica.com" },
       { title: "Harlequin's evolution through centuries", domain: "jstor.org" },
       { title: "Improvisation techniques from the 1500s", domain: "theatrehistory.com" },
@@ -105,7 +105,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🔭", title: "Amateur astronomy", author: "neil",
-    finds: [
+    artifacts: [
       { title: "Your first telescope: a buying guide", domain: "skyandtelescope.org" },
       { title: "Messier objects for beginners", domain: "nasa.gov" },
       { title: "Astrophotography with a phone", domain: "petapixel.com" },
@@ -115,7 +115,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🍞", title: "Sourdough science", author: "mike",
-    finds: [
+    artifacts: [
       { title: "The microbiology of sourdough", domain: "nature.com" },
       { title: "Why hydration percentage matters", domain: "theperfectloaf.com" },
       { title: "Wild yeast vs. commercial yeast", domain: "seriouseats.com" },
@@ -125,7 +125,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "📚", title: "Lost libraries of antiquity", author: "elena",
-    finds: [
+    artifacts: [
       { title: "The burning of Alexandria: myth vs. reality", domain: "jstor.org" },
       { title: "Ashurbanipal's clay tablet library", domain: "britishmuseum.org" },
       { title: "The House of Wisdom in Baghdad", domain: "aeon.co" },
@@ -135,7 +135,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🎨", title: "Color theory in film", author: "lena",
-    finds: [
+    artifacts: [
       { title: "Wes Anderson's pastel palette decoded", domain: "criterion.com" },
       { title: "How Spielberg uses red", domain: "nofilmschool.com" },
       { title: "Color grading: orange and teal explained", domain: "wolfcrow.com" },
@@ -145,7 +145,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🦠", title: "Microbiome research", author: "sara",
-    finds: [
+    artifacts: [
       { title: "The gut-brain axis, explained", domain: "nature.com" },
       { title: "How your microbiome shapes immunity", domain: "science.org" },
       { title: "Fecal transplants: promise and peril", domain: "theatlantic.com" },
@@ -155,7 +155,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🗺️", title: "Cartography history", author: "marco",
-    finds: [
+    artifacts: [
       { title: "Ptolemy's world map and its legacy", domain: "britishmuseum.org" },
       { title: "How medieval maps encoded power", domain: "aeon.co" },
       { title: "Mercator's projection: useful lie", domain: "vox.com" },
@@ -165,7 +165,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🎹", title: "Synth sound design", author: "yuki",
-    finds: [
+    artifacts: [
       { title: "Subtractive vs. FM synthesis", domain: "soundonsound.com" },
       { title: "How the Moog changed everything", domain: "moogmusic.com" },
       { title: "Designing a pad from scratch", domain: "youtube.com" },
@@ -175,7 +175,7 @@ export const STEM_POOL: StemData[] = [
   },
   {
     emoji: "🦴", title: "Paleoanthropology", author: "zara",
-    finds: [
+    artifacts: [
       { title: "Lucy and the Afar Triangle", domain: "smithsonianmag.com" },
       { title: "Denisovans: the ghost lineage", domain: "nature.com" },
       { title: "What teeth reveal about ancient diets", domain: "science.org" },
@@ -196,28 +196,28 @@ export function StemMockup({
   emoji = "🏛️",
   title = "Byzantine architecture",
   meta,
-  finds,
+  artifacts,
   animated = false,
   hoverable = false,
   contributors,
 }: StemMockupProps) {
-  const resolvedFinds = finds ?? STEM_POOL.find((s) => s.title === title)?.finds ?? STEM_POOL[0].finds;
-  const [visibleCount, setVisibleCount] = useState(animated ? 0 : resolvedFinds.length);
+  const resolvedArtifacts = artifacts ?? STEM_POOL.find((s) => s.title === title)?.artifacts ?? STEM_POOL[0].artifacts;
+  const [visibleCount, setVisibleCount] = useState(animated ? 0 : resolvedArtifacts.length);
 
   useEffect(() => {
     if (!animated) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    resolvedFinds.forEach((_, i) => {
+    resolvedArtifacts.forEach((_, i) => {
       timers.push(setTimeout(() => setVisibleCount(i + 1), 1200 + i * 400));
     });
     return () => timers.forEach(clearTimeout);
-  }, [animated, resolvedFinds.length]);
+  }, [animated, resolvedArtifacts.length]);
 
   const metaText =
     meta ??
     (contributors
-      ? `${contributors.map((c) => `@${c}`).join(" + ")} · ${resolvedFinds.length} finds`
-      : `@amrith · ${resolvedFinds.length} finds · public`);
+      ? `${contributors.map((c) => `@${c}`).join(" + ")} · ${resolvedArtifacts.length} artifacts`
+      : `@amrith · ${resolvedArtifacts.length} artifacts · public`);
 
   return (
     <div style={s.wrap} className="stem-mockup">
@@ -240,20 +240,20 @@ export function StemMockup({
         </div>
       )}
       <div style={s.rule} />
-      <div style={s.findList}>
+      <div style={s.artifactList}>
         {resolvedFinds.map((f, i) => (
           <div
             key={f.title}
-            className={hoverable ? "landing-find-row" : undefined}
+            className={hoverable ? "landing-artifact-row" : undefined}
             style={{
-              ...s.findRow,
+              ...s.artifactRow,
               opacity: i < visibleCount ? 1 : 0,
               transform: i < visibleCount ? "translateY(0)" : "translateY(8px)",
               transition: "opacity 0.5s ease, transform 0.5s ease, background 0.15s, padding-left 0.15s",
             }}
           >
-            <span style={s.findTitle}>{f.title}</span>
-            <span style={s.findDomain}>{f.domain}</span>
+            <span style={s.artifactTitle}>{f.title}</span>
+            <span style={s.artifactDomain}>{f.domain}</span>
           </div>
         ))}
       </div>
@@ -300,15 +300,15 @@ const s: Record<string, React.CSSProperties> = {
     marginTop: -8,
   },
   rule: { height: 1, background: "var(--paper-dark)", marginBottom: 16 },
-  findList: { display: "flex", flexDirection: "column", gap: 10 },
-  findRow: {
+  artifactList: { display: "flex", flexDirection: "column", gap: 10 },
+  artifactRow: {
     display: "flex",
     alignItems: "baseline",
     gap: 8,
     borderRadius: 6,
     padding: "2px 0",
   },
-  findTitle: {
+  artifactTitle: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 13,
     color: "var(--ink)",
@@ -318,7 +318,7 @@ const s: Record<string, React.CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  findDomain: {
+  artifactDomain: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 10,
     color: "var(--ink-light)",

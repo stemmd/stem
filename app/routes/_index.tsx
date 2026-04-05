@@ -124,7 +124,7 @@ function PhoneMockup() {
       {/* Stem header */}
       <text x="24" y="86" fontSize="22">🎵</text>
       <text x="50" y="82" fontFamily="DM Serif Display" fontSize="12" fill="var(--ink)">Jazz lineage</text>
-      <text x="50" y="94" fontFamily="DM Mono" fontSize="6" fill="var(--ink-light)">@amrith + @jamie · 4 finds</text>
+      <text x="50" y="94" fontFamily="DM Mono" fontSize="6" fill="var(--ink-light)">@amrith + @jamie · 4 artifacts</text>
       <rect x="16" y="104" width="148" height="1" fill="var(--paper-dark)" />
 
       {/* Find rows */}
@@ -456,8 +456,8 @@ export default function Home() {
             <StemMockup
               emoji={randomStems[0].emoji}
               title={randomStems[0].title}
-              finds={randomStems[0].finds}
-              meta={`@${randomStems[0].author} · ${randomStems[0].finds.length} finds · public`}
+              artifacts={randomStems[0].artifacts}
+              meta={`@${randomStems[0].author} · ${randomStems[0].artifacts.length} artifacts · public`}
               animated
             />
           </div>
@@ -494,8 +494,8 @@ export default function Home() {
             <StemMockup
               emoji={randomStems[1].emoji}
               title={randomStems[1].title}
-              finds={randomStems[1].finds}
-              meta={`@${randomStems[1].author} · ${randomStems[1].finds.length} finds · public`}
+              artifacts={randomStems[1].artifacts}
+              meta={`@${randomStems[1].author} · ${randomStems[1].artifacts.length} artifacts · public`}
               hoverable
             />
           </div>
@@ -539,7 +539,7 @@ export default function Home() {
             <p style={styles.beatLabel}>Branches</p>
             <h2 style={styles.beatHeading}>Explore together</h2>
             <p style={styles.beatBody}>
-              Invite friends to co-curate a stem. Add finds together, build a
+              Invite friends to co-curate a stem. Add artifacts together, build a
               shared collection around a topic you're both exploring. Like a
               collaborative playlist, but for curiosity.
             </p>
@@ -549,7 +549,7 @@ export default function Home() {
               emoji="🎵"
               title="Jazz lineage"
               contributors={["amrith", "jamie"]}
-              finds={[
+              artifacts={[
                 { title: "Miles Davis and the Birth of Cool", domain: "npr.org" },
                 { title: "The Anatomy of a Jazz Standard", domain: "jstor.org" },
                 { title: "How Coltrane changed harmony", domain: "nytimes.com" },
@@ -751,7 +751,7 @@ const CSS_TEXT = `
   .hero-btn:hover { background: var(--branch) !important; transform: translateY(-1px); }
   .hero-secondary:hover { color: var(--ink) !important; }
 
-  .landing-find-row:hover {
+  .landing-artifact-row:hover {
     background: var(--paper-mid) !important;
     padding-left: 6px !important;
   }

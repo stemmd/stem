@@ -79,21 +79,21 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
 
   if (intent === "export_data") {
-    const [stemsResult, findsResult] = await Promise.all([
+    const [stemsResult, artifactsResult] = await Promise.all([
       db.prepare("SELECT id, title, slug, description FROM stems WHERE user_id=? ORDER BY updated_at DESC")
         .bind(user.id).all<{ id: string; title: string; slug: string; description: string | null }>(),
       db.prepare(`
         SELECT f.title, f.url, f.note, f.stem_id
-        FROM finds f
+        FROM artifacts f
         WHERE f.stem_id IN (SELECT id FROM stems WHERE user_id=?) AND f.status='approved'
         ORDER BY f.stem_id, f.created_at
       `).bind(user.id).all<{ title: string | null; url: string; note: string | null; stem_id: string }>(),
     ]);
 
-    const findsByStem = new Map<string, typeof findsResult.results>();
-    for (const f of findsResult.results) {
-      if (!findsByStem.has(f.stem_id)) findsByStem.set(f.stem_id, []);
-      findsByStem.get(f.stem_id)!.push(f);
+    const artifactsByStem = new Map<string, typeof artifactsResult.results>();
+    for (const f of artifactsResult.results) {
+      if (!artifactsByStem.has(f.stem_id)) artifactsByStem.set(f.stem_id, []);
+      artifactsByStem.get(f.stem_id)!.push(f);
     }
 
     const lines = [`# My stems on Stem\n`, `Exported by @${user.username}\n\n---\n`];
@@ -101,7 +101,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       lines.push(`\n## ${stem.title}`);
       if (stem.description) lines.push(`\n${stem.description}`);
       lines.push("");
-      for (const f of findsByStem.get(stem.id) ?? []) {
+      for (const f of artifactsByStem.get(stem.id) ?? []) {
         lines.push(`- [${f.title || f.url}](${f.url})${f.note ? ` — ${f.note}` : ""}`);
       }
     }
@@ -122,8 +122,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // Delete dependent data first, then user
     await db.prepare("DELETE FROM sessions WHERE user_id=?").bind(user.id).run();
     await Promise.all([
-      db.prepare("DELETE FROM finds WHERE stem_id IN (SELECT id FROM stems WHERE user_id=?)").bind(user.id).run(),
-      db.prepare("DELETE FROM finds WHERE added_by=?").bind(user.id).run(),
+      db.prepare("DELETE FROM artifacts WHERE stem_id IN (SELECT id FROM stems WHERE user_id=?)").bind(user.id).run(),
+      db.prepare("DELETE FROM artifacts WHERE added_by=?").bind(user.id).run(),
       db.prepare("DELETE FROM stem_follows WHERE follower_id=? OR stem_id IN (SELECT id FROM stems WHERE user_id=?)").bind(user.id, user.id).run(),
       db.prepare("DELETE FROM stem_categories WHERE stem_id IN (SELECT id FROM stems WHERE user_id=?)").bind(user.id).run(),
       db.prepare("DELETE FROM branch_members WHERE user_id=? OR branch_id IN (SELECT id FROM stems WHERE user_id=?)").bind(user.id, user.id).run(),
@@ -440,7 +440,7 @@ function PushToggle() {
           Push notifications
         </p>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--ink-light)", marginTop: 2 }}>
-          {status === "on" ? "You'll be notified about new followers, finds, and more." : "Get notified when someone follows you or adds to your stems."}
+          {status === "on" ? "You'll be notified about new followers, artifacts, and more." : "Get notified when someone follows you or adds to your stems."}
         </p>
       </div>
       <button
@@ -602,7 +602,7 @@ export default function Settings() {
         {/* Export */}
         <section style={{ ...styles.section, marginTop: 48 }}>
           <h2 style={styles.sectionHeading}>Export your data</h2>
-          <p style={styles.hint}>Download all your stems and finds as a Markdown file.</p>
+          <p style={styles.hint}>Download all your stems and artifacts as a Markdown file.</p>
           <Form method="post">
             <input type="hidden" name="intent" value="export_data" />
             <button type="submit" disabled={submitting} style={styles.button}>
@@ -742,7 +742,7 @@ export default function Settings() {
             <Form method="post" style={styles.form}>
               <input type="hidden" name="intent" value="delete_account" />
               <p style={{ ...styles.hint, color: "var(--taken)" }}>
-                This permanently deletes your account, stems, and all finds. Type your username to confirm.
+                This permanently deletes your account, stems, and all artifacts. Type your username to confirm.
               </p>
               <input
                 name="confirm_username"

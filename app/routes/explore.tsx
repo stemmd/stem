@@ -22,7 +22,7 @@ interface ExploreStem {
   emoji: string | null;
   username: string;
   display_name: string | null;
-  find_count: number;
+  artifact_count: number;
   updated_at: string;
   primary_category: string | null;
 }
@@ -59,7 +59,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       .prepare(`
         SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at,
                u.username, u.display_name,
-               (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count,
+               (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count,
                (SELECT sc.category_id FROM stem_categories sc WHERE sc.stem_id = s.id LIMIT 1) as primary_category
         FROM stems s
         JOIN users u ON u.id = s.user_id
@@ -89,7 +89,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       .prepare(`
         SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at,
                u.username, u.display_name,
-               (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count,
+               (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count,
                (SELECT sc.category_id FROM stem_categories sc WHERE sc.stem_id = s.id LIMIT 1) as primary_category
         FROM stems s
         JOIN users u ON u.id = s.user_id
@@ -116,7 +116,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     db.prepare(`
       SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at,
              u.username, u.display_name,
-             (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count,
+             (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count,
              (SELECT sc.category_id FROM stem_categories sc WHERE sc.stem_id = s.id LIMIT 1) as primary_category
       FROM stems s
       JOIN users u ON u.id = s.user_id
@@ -275,7 +275,7 @@ export default function Explore() {
                       title={stem.title}
                       emoji={stem.emoji ?? undefined}
                       description={stem.description}
-                      findCount={stem.find_count}
+                      artifactCount={stem.artifact_count}
                       username={stem.username}
                       showAuthor
                       categoryTint={getCategoryTint(stem.primary_category)}
@@ -316,7 +316,7 @@ export default function Explore() {
                       title={stem.title}
                       emoji={stem.emoji ?? undefined}
                       description={stem.description}
-                      findCount={stem.find_count}
+                      artifactCount={stem.artifact_count}
                       username={stem.username}
                       showAuthor
                       categoryTint={getCategoryTint(stem.primary_category)}
@@ -356,7 +356,7 @@ export default function Explore() {
                       title={stem.title}
                       emoji={stem.emoji ?? undefined}
                       description={stem.description}
-                      findCount={stem.find_count}
+                      artifactCount={stem.artifact_count}
                       username={stem.username}
                       showAuthor
                       categoryTint={getCategoryTint(stem.primary_category)}

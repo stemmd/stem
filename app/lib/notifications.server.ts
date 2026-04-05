@@ -2,8 +2,8 @@ import { nanoid } from "nanoid";
 
 type NotificationType =
   | "new_follower"
-  | "new_find"
-  | "find_approved"
+  | "new_artifact"
+  | "artifact_approved"
   | "stem_followed";
 
 interface CreateNotificationParams {
@@ -12,7 +12,7 @@ interface CreateNotificationParams {
   type: NotificationType;
   actorId: string;
   stemId?: string | null;
-  findId?: string | null;
+  artifactId?: string | null;
 }
 
 export async function createNotification({
@@ -21,7 +21,7 @@ export async function createNotification({
   type,
   actorId,
   stemId,
-  findId,
+  artifactId,
 }: CreateNotificationParams): Promise<void> {
   // Don't notify yourself
   if (userId === actorId) return;
@@ -29,9 +29,9 @@ export async function createNotification({
   const id = `ntf_${nanoid(10)}`;
   await db
     .prepare(
-      "INSERT INTO notifications (id, user_id, type, actor_id, stem_id, find_id) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO notifications (id, user_id, type, actor_id, stem_id, artifact_id) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .bind(id, userId, type, actorId, stemId ?? null, findId ?? null)
+    .bind(id, userId, type, actorId, stemId ?? null, artifactId ?? null)
     .run();
 }
 
@@ -51,7 +51,7 @@ export interface NotificationRow {
   type: string;
   actor_id: string;
   stem_id: string | null;
-  find_id: string | null;
+  artifact_id: string | null;
   read: number;
   created_at: string;
   actor_username: string;
@@ -60,7 +60,7 @@ export interface NotificationRow {
   stem_title: string | null;
   stem_slug: string | null;
   stem_owner_username: string | null;
-  find_title: string | null;
+  artifact_title: string | null;
 }
 
 export async function getNotifications(
@@ -70,16 +70,16 @@ export async function getNotifications(
   before?: string | null
 ): Promise<NotificationRow[]> {
   let query = `
-    SELECT n.id, n.type, n.actor_id, n.stem_id, n.find_id, n.read, n.created_at,
+    SELECT n.id, n.type, n.actor_id, n.stem_id, n.artifact_id, n.read, n.created_at,
            a.username as actor_username, a.display_name as actor_display_name, a.avatar_url as actor_avatar_url,
            s.title as stem_title, s.slug as stem_slug,
            su.username as stem_owner_username,
-           f.title as find_title
+           f.title as artifact_title
     FROM notifications n
     JOIN users a ON a.id = n.actor_id
     LEFT JOIN stems s ON s.id = n.stem_id
     LEFT JOIN users su ON su.id = s.user_id
-    LEFT JOIN finds f ON f.id = n.find_id
+    LEFT JOIN artifacts f ON f.id = n.artifact_id
     WHERE n.user_id = ?
   `;
   const bindings: string[] = [userId];

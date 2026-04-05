@@ -92,11 +92,11 @@ const DOOM_CARDS = [
 ];
 
 const STEM_CARDS = [
-  { emoji: "🎵", title: "Jazz lineage", author: "@jamie", findCount: 12, topFind: "Miles Davis and the Birth of Cool" },
-  { emoji: "🌿", title: "Urban foraging", author: "@dan", findCount: 8, topFind: "A beginner's guide to wild garlic" },
-  { emoji: "🎬", title: "New wave cinema", author: "@priya", findCount: 15, topFind: "Godard's jump cuts, deconstructed" },
-  { emoji: "🏛️", title: "Byzantine architecture", author: "@claudia", findCount: 9, topFind: "Hagia Sophia's pendentive dome" },
-  { emoji: "🧪", title: "Fermentation science", author: "@mike", findCount: 6, topFind: "The microbiology of sourdough" },
+  { emoji: "🎵", title: "Jazz lineage", author: "@jamie", artifactCount: 12, topArtifact: "Miles Davis and the Birth of Cool" },
+  { emoji: "🌿", title: "Urban foraging", author: "@dan", artifactCount: 8, topArtifact: "A beginner's guide to wild garlic" },
+  { emoji: "🎬", title: "New wave cinema", author: "@priya", artifactCount: 15, topArtifact: "Godard's jump cuts, deconstructed" },
+  { emoji: "🏛️", title: "Byzantine architecture", author: "@claudia", artifactCount: 9, topArtifact: "Hagia Sophia's pendentive dome" },
+  { emoji: "🧪", title: "Fermentation science", author: "@mike", artifactCount: 6, topArtifact: "The microbiology of sourdough" },
 ];
 
 export function ConvergenceSection() {
@@ -137,10 +137,10 @@ export function ConvergenceSection() {
                   <span style={s.stemEmoji}>{card.emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={s.stemTitle}>{card.title}</p>
-                    <p style={s.stemMeta}>{card.author} · {card.findCount} finds</p>
+                    <p style={s.stemMeta}>{card.author} · {card.artifactCount} artifacts</p>
                   </div>
                 </div>
-                <p style={s.stemFind}>{card.topFind}</p>
+                <p style={s.stemArtifact}>{card.topArtifact}</p>
               </div>
             ))}
           </div>
@@ -254,7 +254,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "var(--ink-light)",
     marginTop: 2,
   },
-  stemFind: {
+  stemArtifact: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 11,
     color: "var(--ink-mid)",
