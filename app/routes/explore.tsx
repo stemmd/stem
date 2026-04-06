@@ -81,6 +81,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       people: [] as ExploreUser[],
       categoryCounts: [] as CategoryCount[],
       trendingStems: [] as ExploreStem[],
+      featuredStems: [] as ExploreStem[],
       hasMore,
     });
   }
@@ -110,12 +111,28 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       people: [] as ExploreUser[],
       categoryCounts: [] as CategoryCount[],
       trendingStems: [] as ExploreStem[],
+      featuredStems: [] as ExploreStem[],
       hasMore,
     });
   }
 
   // --- Default: sectioned home view ---
-  const [trendingStemsResult, categoryCountsResult, peopleResult] = await Promise.all([
+  const [featuredStemsResult, trendingStemsResult, categoryCountsResult, peopleResult] = await Promise.all([
+    db.prepare(`
+      SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at,
+             u.username, u.display_name,
+             (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count,
+             (SELECT sc.category_id FROM stem_categories sc WHERE sc.stem_id = s.id LIMIT 1) as primary_category,
+             fs.label as featured_label
+      FROM featured_stems fs
+      JOIN stems s ON s.id = fs.stem_id
+      JOIN users u ON u.id = s.user_id
+      WHERE s.visibility = 'public'
+        AND (fs.expires_at IS NULL OR fs.expires_at > datetime('now'))
+      ORDER BY fs.position ASC
+      LIMIT 6
+    `).all<ExploreStem & { featured_label: string | null }>(),
+
     db.prepare(`
       SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at,
              u.username, u.display_name,
@@ -174,6 +191,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     people: peopleWithFollow,
     categoryCounts: categoryCountsResult.results,
     trendingStems: trendingStemsResult.results,
+    featuredStems: featuredStemsResult.results,
     hasMore: false,
   });
 }
@@ -185,6 +203,7 @@ export default function Explore() {
     people,
     categoryCounts,
     trendingStems,
+    featuredStems,
     hasMore: initialHasMore,
   } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -348,6 +367,28 @@ export default function Explore() {
         {/* Default sectioned view */}
         {isDefault && (
           <>
+            {/* Featured stems */}
+            {featuredStems && featuredStems.length > 0 && (
+              <div style={{ marginTop: 8, marginBottom: 40 }}>
+                <p style={styles.sectionLabel}>Featured</p>
+                <div style={styles.grid}>
+                  {featuredStems.map((stem) => (
+                    <StemCard
+                      key={stem.id}
+                      to={`/${stem.username}/${stem.slug}`}
+                      title={stem.title}
+                      emoji={stem.emoji ?? undefined}
+                      description={stem.description}
+                      artifactCount={stem.artifact_count}
+                      username={stem.username}
+                      showAuthor
+                      categoryTint={getCategoryTint(stem.primary_category)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Section 1: Trending */}
             <div style={{ marginTop: 8 }}>
               <p style={styles.sectionLabel}>Trending</p>

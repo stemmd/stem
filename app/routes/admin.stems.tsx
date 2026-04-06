@@ -85,6 +85,36 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return json({ ok: true });
   }
 
+  if (intent === "feature_stem") {
+    const stemId = form.get("stemId") as string;
+    const label = (form.get("label") as string | null)?.trim() || null;
+    if (!stemId) return json({ error: "Missing stemId" }, { status: 400 });
+
+    const db = context.cloudflare.env.DB;
+
+    // Check if already featured — toggle off if so
+    const existing = await db
+      .prepare("SELECT id FROM featured_stems WHERE stem_id = ?")
+      .bind(stemId)
+      .first();
+
+    if (existing) {
+      await db.prepare("DELETE FROM featured_stems WHERE stem_id = ?").bind(stemId).run();
+    } else {
+      const maxPos = await db
+        .prepare("SELECT MAX(position) as p FROM featured_stems")
+        .first<{ p: number | null }>();
+      const position = (maxPos?.p ?? 0) + 1;
+      const id = `fs_${Date.now()}`;
+      await db
+        .prepare("INSERT INTO featured_stems (id, stem_id, position, label, created_at) VALUES (?, ?, ?, ?, datetime('now'))")
+        .bind(id, stemId, position, label)
+        .run();
+    }
+
+    return json({ ok: true });
+  }
+
   return json({ error: "Unknown intent" }, { status: 400 });
 }
 
@@ -172,7 +202,8 @@ export default function AdminStems() {
                 <td data-hide-mobile style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
                   <DateEditor stemId={stem.id} currentDate={stem.created_at} />
                 </td>
-                <td style={styles.td}>
+                <td style={{ ...styles.td, display: "flex", gap: 4 }}>
+                  <FeatureButton stemId={stem.id} />
                   <DeleteButton stemId={stem.id} title={stem.title} />
                 </td>
               </tr>
@@ -249,6 +280,32 @@ function DateEditor({ stemId, currentDate }: { stemId: string; currentDate: stri
         }}
       >
         {fetcher.state !== "idle" ? "..." : saved ? "✓" : "Save"}
+      </button>
+    </fetcher.Form>
+  );
+}
+
+function FeatureButton({ stemId }: { stemId: string }) {
+  const fetcher = useFetcher<{ ok?: boolean }>();
+  return (
+    <fetcher.Form method="post">
+      <input type="hidden" name="intent" value="feature_stem" />
+      <input type="hidden" name="stemId" value={stemId} />
+      <button
+        type="submit"
+        style={{
+          padding: "4px 10px",
+          background: "var(--leaf)",
+          border: "1px solid var(--leaf-border)",
+          borderRadius: 4,
+          fontSize: 12,
+          fontFamily: "'DM Sans', sans-serif",
+          color: "var(--forest)",
+          cursor: "pointer",
+        }}
+        title="Toggle featured"
+      >
+        {fetcher.state !== "idle" ? "..." : "Feature"}
       </button>
     </fetcher.Form>
   );
