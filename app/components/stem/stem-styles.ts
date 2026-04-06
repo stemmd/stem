@@ -489,4 +489,59 @@ export const styles: Record<string, React.CSSProperties> = {
     padding: "1px 8px", borderRadius: 10,
     border: "1px solid var(--leaf-border)",
   },
+
+  // Quick search integrations (YouTube, arXiv, Wikipedia)
+  quickSearchRow: {
+    display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" as const,
+  },
+  quickSearchLabel: {
+    fontFamily: "'DM Mono', monospace", fontSize: 11, color: "var(--ink-light)",
+  },
+  quickSearchBtn: {
+    fontFamily: "'DM Mono', monospace", fontSize: 11,
+    padding: "4px 10px", borderRadius: 6,
+    border: "1px solid var(--paper-dark)", background: "var(--surface)",
+    color: "var(--ink-mid)", cursor: "pointer",
+  },
+  searchPanel: {
+    border: "1px solid var(--paper-dark)", borderRadius: 10,
+    padding: 12, marginTop: 8, background: "var(--surface)",
+  },
+  searchInputRow: {
+    display: "flex", gap: 8, marginBottom: 8,
+  },
+  searchInput: {
+    flex: 1, fontFamily: "'DM Sans', sans-serif", fontSize: 14,
+    padding: "8px 12px", borderRadius: 8,
+    border: "1px solid var(--paper-dark)", background: "var(--paper)",
+    color: "var(--ink)", outline: "none",
+  },
+  searchBtn: {
+    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+    padding: "8px 16px", borderRadius: 8,
+    border: "none", background: "var(--forest)", color: "white",
+    cursor: "pointer", fontWeight: 500,
+  },
+  searchCloseBtn: {
+    fontFamily: "'DM Sans', sans-serif", fontSize: 14,
+    padding: "8px 12px", borderRadius: 8,
+    border: "1px solid var(--paper-dark)", background: "none",
+    color: "var(--ink-light)", cursor: "pointer",
+  },
+  searchResult: {
+    display: "flex", alignItems: "flex-start", gap: 10,
+    padding: "8px 10px", borderRadius: 8, border: "none",
+    background: "none", cursor: "pointer", width: "100%",
+    textAlign: "left" as const, fontFamily: "'DM Sans', sans-serif",
+    transition: "background 0.15s",
+  },
+  searchResultTitle: {
+    fontSize: 13, color: "var(--ink)", fontWeight: 500, lineHeight: 1.3,
+  },
+  searchResultMeta: {
+    fontSize: 11, color: "var(--ink-light)", fontFamily: "'DM Mono', monospace", marginTop: 2,
+  },
+  searchResultThumb: {
+    width: 80, height: 45, borderRadius: 4, objectFit: "cover" as const, flexShrink: 0,
+  },
 };

@@ -33,6 +33,11 @@ export function AddArtifactForm({
   const [uploading, setUploading] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadNote, setUploadNote] = useState("");
+  const [searchMode, setSearchMode] = useState<"none" | "youtube" | "arxiv" | "wikipedia">("none");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const ogFetcher = useFetcher<OGData>();
   const addFetcher = useFetcher<{ success?: boolean; pending?: boolean; error?: string }>();
@@ -56,6 +61,10 @@ export function AddArtifactForm({
       setUploadError("");
       setUploadTitle("");
       setUploadNote("");
+      setSearchMode("none");
+      setSearchQuery("");
+      setSearchResults([]);
+      setSearchError("");
     }
   }, [addFetcher.state, addFetcher.data]);
 
@@ -63,11 +72,87 @@ export function AddArtifactForm({
     setUrl(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
+    // DOI detection: raw DOI or doi.org URL
+    const doiFromUrl = val.match(/^https?:\/\/doi\.org\/(.+)$/);
+    const doiDirect = val.match(/^(10\.\d{4,9}\/[^\s]+)$/);
+    const doi = doiFromUrl?.[1] || doiDirect?.[1];
+    if (doi) {
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/lookup/doi?doi=${encodeURIComponent(doi)}`);
+          if (res.ok) {
+            const data = await res.json() as { title: string; authors: string[]; journal: string; year: number | null; url: string };
+            if (!val.startsWith("http")) setUrl(data.url);
+            ogFetcher.load(`/api/og?url=${encodeURIComponent(data.url)}`);
+          }
+        } catch { /* ignore */ }
+      }, 500);
+      return;
+    }
+
+    // ISBN detection: 10 or 13 digits with optional hyphens
+    const stripped = val.replace(/[-\s]/g, "");
+    if (/^\d{10}(\d{3})?$/.test(stripped)) {
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/lookup/isbn?isbn=${stripped}`);
+          if (res.ok) {
+            const data = await res.json() as { url: string };
+            setUrl(data.url);
+            ogFetcher.load(`/api/og?url=${encodeURIComponent(data.url)}`);
+          }
+        } catch { /* ignore */ }
+      }, 500);
+      return;
+    }
+
     if (!val.startsWith("http")) return;
 
     debounceRef.current = setTimeout(() => {
       ogFetcher.load(`/api/og?url=${encodeURIComponent(val)}`);
     }, 500);
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchError("");
+    try {
+      const endpoint = searchMode === "youtube" ? "/api/search/youtube"
+        : searchMode === "arxiv" ? "/api/search/arxiv"
+        : "/api/search/wikipedia";
+      const res = await fetch(`${endpoint}?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (!res.ok && data && typeof data === "object" && "error" in data) {
+        setSearchError((data as { error: string }).error);
+        setSearchResults([]);
+      } else {
+        setSearchResults(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setSearchResults([]);
+      setSearchError("Search failed");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSearchSelect = (result: any) => {
+    let selectedUrl = "";
+    if (searchMode === "youtube") {
+      selectedUrl = `https://www.youtube.com/watch?v=${result.videoId}`;
+    } else if (searchMode === "arxiv") {
+      selectedUrl = `https://arxiv.org/abs/${result.arxivId}`;
+    } else if (searchMode === "wikipedia") {
+      selectedUrl = result.pageUrl;
+    }
+    setUrl(selectedUrl);
+    setSearchMode("none");
+    setSearchResults([]);
+    setSearchQuery("");
+    setSearchError("");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    ogFetcher.load(`/api/og?url=${encodeURIComponent(selectedUrl)}`);
   };
 
   const og = url ? ogFetcher.data : null;
@@ -317,6 +402,81 @@ export function AddArtifactForm({
         />
         {loadingOG && <span style={styles.fetchingDot}>…</span>}
       </div>
+
+      <div style={styles.quickSearchRow}>
+        <span style={styles.quickSearchLabel}>Quick add:</span>
+        <button type="button" onClick={() => { setSearchMode(searchMode === "youtube" ? "none" : "youtube"); setSearchResults([]); setSearchQuery(""); setSearchError(""); }} style={{ ...styles.quickSearchBtn, ...(searchMode === "youtube" ? { borderColor: "var(--forest)", color: "var(--forest)" } : {}) }}>
+          {"▶"} YouTube
+        </button>
+        <button type="button" onClick={() => { setSearchMode(searchMode === "arxiv" ? "none" : "arxiv"); setSearchResults([]); setSearchQuery(""); setSearchError(""); }} style={{ ...styles.quickSearchBtn, ...(searchMode === "arxiv" ? { borderColor: "var(--forest)", color: "var(--forest)" } : {}) }}>
+          {"📄"} arXiv
+        </button>
+        <button type="button" onClick={() => { setSearchMode(searchMode === "wikipedia" ? "none" : "wikipedia"); setSearchResults([]); setSearchQuery(""); setSearchError(""); }} style={{ ...styles.quickSearchBtn, ...(searchMode === "wikipedia" ? { borderColor: "var(--forest)", color: "var(--forest)" } : {}) }}>
+          {"🌐"} Wikipedia
+        </button>
+      </div>
+
+      {searchMode !== "none" && (
+        <div style={styles.searchPanel}>
+          <div style={styles.searchInputRow}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}
+              placeholder={searchMode === "youtube" ? "Search YouTube..." : searchMode === "arxiv" ? "Search arXiv..." : "Search Wikipedia..."}
+              style={styles.searchInput}
+              autoFocus
+            />
+            <button type="button" onClick={handleSearch} disabled={searching || !searchQuery.trim()} style={{ ...styles.searchBtn, opacity: searching || !searchQuery.trim() ? 0.5 : 1 }}>
+              {searching ? "..." : "Search"}
+            </button>
+            <button type="button" onClick={() => { setSearchMode("none"); setSearchResults([]); setSearchQuery(""); setSearchError(""); }} style={styles.searchCloseBtn}>
+              {"✕"}
+            </button>
+          </div>
+          {searchError && (
+            <p style={{ fontSize: 12, color: "var(--taken)", fontFamily: "'DM Mono', monospace", margin: "4px 0" }}>
+              {searchError}
+            </p>
+          )}
+          {searchResults.map((result, i) => (
+            <button key={i} type="button" onClick={() => handleSearchSelect(result)} style={styles.searchResult}>
+              {searchMode === "youtube" && (
+                <>
+                  {result.thumbnail && <img src={result.thumbnail} alt="" style={styles.searchResultThumb as React.CSSProperties} />}
+                  <div>
+                    <div style={styles.searchResultTitle}>{result.title}</div>
+                    <div style={styles.searchResultMeta}>{result.channelTitle}</div>
+                  </div>
+                </>
+              )}
+              {searchMode === "arxiv" && (
+                <div>
+                  <div style={styles.searchResultTitle}>{result.title}</div>
+                  <div style={styles.searchResultMeta}>
+                    {(result.authors || []).slice(0, 3).join(", ")}
+                    {result.authors?.length > 3 ? ` +${result.authors.length - 3} more` : ""}
+                  </div>
+                  {result.summary && (
+                    <div style={{ ...styles.searchResultMeta, marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                      {result.summary.length > 150 ? result.summary.slice(0, 150) + "..." : result.summary}
+                    </div>
+                  )}
+                </div>
+              )}
+              {searchMode === "wikipedia" && (
+                <div>
+                  <div style={styles.searchResultTitle}>{result.title}</div>
+                  <div style={{ ...styles.searchResultMeta, fontFamily: "'DM Sans', sans-serif" }}>
+                    {result.snippet}
+                  </div>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {og && !("error" in og) && (
         <div style={styles.previewCard}>
