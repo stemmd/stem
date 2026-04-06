@@ -1,17 +1,32 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { redirect } from "@remix-run/cloudflare";
 import { requireNoUser } from "~/lib/auth.server";
+import { validateUsername } from "~/lib/username";
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const mobile = url.searchParams.get("mobile");
+  const username = url.searchParams.get("username");
 
   // Skip auth check for mobile (ephemeral browser has no session)
   if (!mobile) await requireNoUser(request, context);
 
+  // Validate username if provided (from landing page CTA)
+  if (username && !validateUsername(username).valid) {
+    throw redirect("/?error=invalid_username");
+  }
+
   const clientId = context.cloudflare.env.GOOGLE_CLIENT_ID;
-  // Encode mobile flag in state so callback knows to redirect to app
-  const state = mobile === "1" ? `mobile:${crypto.randomUUID()}` : crypto.randomUUID();
+  // Encode mobile flag and/or username in state so callback can use them
+  const csrfToken = crypto.randomUUID();
+  let state: string;
+  if (mobile === "1") {
+    state = `mobile:${csrfToken}`;
+  } else if (username) {
+    state = `signup:${username}:${csrfToken}`;
+  } else {
+    state = csrfToken;
+  }
   const redirectUri = new URL("/auth/google/callback", url.origin).toString();
 
   const params = new URLSearchParams({

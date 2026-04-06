@@ -43,7 +43,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     bindings.push(before);
   }
 
-  const { results: finds } = await db
+  const { results: artifacts } = await db
     .prepare(`
       SELECT f.id, f.url, f.title, f.image_url, f.favicon_url, f.note, f.created_at,
              s.title as stem_title, s.slug as stem_slug, s.emoji as stem_emoji,
@@ -51,7 +51,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
              cu.username as contributor_username,
              cu.display_name as contributor_display_name,
              (SELECT sc.category_id FROM stem_categories sc WHERE sc.stem_id = s.id LIMIT 1) as stem_category
-      FROM finds f
+      FROM artifacts f
       JOIN stems s ON s.id = f.stem_id
       JOIN users su ON su.id = s.user_id
       JOIN users cu ON cu.id = f.added_by
@@ -76,8 +76,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     .bind(...bindings)
     .all<FeedItem>();
 
-  const hasMore = finds.length > PAGE_SIZE;
-  return json({ user, finds: hasMore ? finds.slice(0, PAGE_SIZE) : finds, hasMore });
+  const hasMore = artifacts.length > PAGE_SIZE;
+  return json({ user, artifacts: hasMore ? artifacts.slice(0, PAGE_SIZE) : artifacts, hasMore });
 }
 
 function getTimePeriod(dateStr: string): string {
@@ -102,26 +102,26 @@ interface StemGroup {
   stemEmoji: string | null;
   stemCategory: string | null;
   latestAt: string;
-  finds: FeedItem[];
+  artifacts: FeedItem[];
 }
 
-function groupFinds(finds: FeedItem[]): StemGroup[] {
+function groupArtifacts(artifacts: FeedItem[]): StemGroup[] {
   const groups: StemGroup[] = [];
-  for (const find of finds) {
-    const key = `${find.stem_username}/${find.stem_slug}`;
+  for (const item of artifacts) {
+    const key = `${item.stem_username}/${item.stem_slug}`;
     const existing = groups.find((g) => g.key === key);
     if (existing) {
-      existing.finds.push(find);
+      existing.artifacts.push(item);
     } else {
       groups.push({
         key,
-        stemTitle: find.stem_title,
-        stemSlug: find.stem_slug,
-        stemUsername: find.stem_username,
-        stemEmoji: find.stem_emoji,
-        stemCategory: find.stem_category,
-        latestAt: find.created_at,
-        finds: [find],
+        stemTitle: item.stem_title,
+        stemSlug: item.stem_slug,
+        stemUsername: item.stem_username,
+        stemEmoji: item.stem_emoji,
+        stemCategory: item.stem_category,
+        latestAt: item.created_at,
+        artifacts: [item],
       });
     }
   }
@@ -139,8 +139,8 @@ const PERIOD_ORDER = [
   "Earlier",
 ];
 
-function groupByTimePeriod(finds: FeedItem[]): TimePeriodGroup[] {
-  const stemGroups = groupFinds(finds);
+function groupByTimePeriod(artifacts: FeedItem[]): TimePeriodGroup[] {
+  const stemGroups = groupArtifacts(artifacts);
   const periodMap = new Map<string, StemGroup[]>();
 
   for (const group of stemGroups) {
@@ -151,7 +151,7 @@ function groupByTimePeriod(finds: FeedItem[]): TimePeriodGroup[] {
     periodMap.get(period)!.push(group);
   }
 
-  // Sort stem groups within each period by most recent find
+  // Sort stem groups within each period by most recent artifact
   for (const groups of periodMap.values()) {
     groups.sort((a, b) => new Date(b.latestAt + "Z").getTime() - new Date(a.latestAt + "Z").getTime());
   }
@@ -162,33 +162,33 @@ function groupByTimePeriod(finds: FeedItem[]): TimePeriodGroup[] {
 }
 
 export default function Feed() {
-  const { user, finds: initialFinds, hasMore: initialHasMore } = useLoaderData<typeof loader>();
-  const moreFetcher = useFetcher<{ finds: FeedItem[]; hasMore: boolean }>();
-  const [allFinds, setAllFinds] = useState<FeedItem[]>(initialFinds);
+  const { user, artifacts: initialArtifacts, hasMore: initialHasMore } = useLoaderData<typeof loader>();
+  const moreFetcher = useFetcher<{ artifacts: FeedItem[]; hasMore: boolean }>();
+  const [allArtifacts, setAllArtifacts] = useState<FeedItem[]>(initialArtifacts);
   const [hasMore, setHasMore] = useState(initialHasMore);
 
   useEffect(() => { track("page_view", { page: "feed" }); }, []);
 
   // Reset on navigation
   useEffect(() => {
-    setAllFinds(initialFinds);
+    setAllArtifacts(initialArtifacts);
     setHasMore(initialHasMore);
-  }, [initialFinds, initialHasMore]);
+  }, [initialArtifacts, initialHasMore]);
 
   // Append results when more loads
   useEffect(() => {
     if (moreFetcher.state === "idle" && moreFetcher.data) {
-      setAllFinds((prev) => [...prev, ...moreFetcher.data!.finds]);
+      setAllArtifacts((prev) => [...prev, ...moreFetcher.data!.artifacts]);
       setHasMore(moreFetcher.data.hasMore);
     }
   }, [moreFetcher.state, moreFetcher.data]);
 
   const loadMore = () => {
-    const oldest = allFinds[allFinds.length - 1]?.created_at;
+    const oldest = allArtifacts[allArtifacts.length - 1]?.created_at;
     if (oldest) moreFetcher.load(`/feed?before=${encodeURIComponent(oldest)}`);
   };
 
-  const timePeriods = groupByTimePeriod(allFinds);
+  const timePeriods = groupByTimePeriod(allArtifacts);
 
   return (
     <div style={styles.page}>
@@ -199,7 +199,7 @@ export default function Feed() {
           <Link to="/explore" style={styles.exploreLink}>Explore stems</Link>
         </div>
 
-        {allFinds.length === 0 ? (
+        {allArtifacts.length === 0 ? (
           <div style={styles.empty}>
             <p style={styles.emptyText}>
               Follow some stems to see what people are exploring.
@@ -230,17 +230,17 @@ export default function Feed() {
                         · @{group.stemUsername}
                       </span>
                     </div>
-                    <div style={styles.findList}>
-                      {group.finds.map((find) => (
+                    <div style={styles.artifactList}>
+                      {group.artifacts.map((artifact) => (
                         <a
-                          key={find.id}
-                          href={find.url}
+                          key={artifact.id}
+                          href={artifact.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={styles.findRow}
+                          style={styles.artifactRow}
                         >
-                          <span style={styles.findRowTitle}>{find.title || find.url}</span>
-                          <span style={styles.findRowDomain}>{getDomain(find.url)}</span>
+                          <span style={styles.artifactRowTitle}>{artifact.title || artifact.url}</span>
+                          <span style={styles.artifactRowDomain}>{getDomain(artifact.url)}</span>
                         </a>
                       ))}
                     </div>
@@ -336,12 +336,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--ink-light)",
   },
 
-  findList: {
+  artifactList: {
     display: "flex",
     flexDirection: "column" as const,
     gap: 2,
   },
-  findRow: {
+  artifactRow: {
     display: "flex",
     alignItems: "baseline",
     gap: 8,
@@ -349,7 +349,7 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: "none",
     color: "inherit",
   },
-  findRowTitle: {
+  artifactRowTitle: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 13,
     color: "var(--ink)",
@@ -359,7 +359,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minWidth: 0,
   },
-  findRowDomain: {
+  artifactRowDomain: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 10,
     color: "var(--ink-light)",

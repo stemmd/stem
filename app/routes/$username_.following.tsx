@@ -17,7 +17,7 @@ interface FollowedStem {
   description: string | null;
   emoji: string | null;
   is_branch: number;
-  find_count: number;
+  artifact_count: number;
   owner_username: string;
   owner_display_name: string | null;
 }
@@ -51,7 +51,7 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
       .prepare(`
         SELECT s.id, s.title, s.slug, s.description, s.emoji, s.is_branch,
                u.username as owner_username, u.display_name as owner_display_name,
-               (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count
+               (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count
         FROM stem_follows sf
         JOIN stems s ON s.id = sf.stem_id
         JOIN users u ON u.id = s.user_id
@@ -122,7 +122,7 @@ export default function Following() {
                   title={stem.title}
                   emoji={stem.emoji ?? undefined}
                   description={stem.description}
-                  findCount={stem.find_count}
+                  artifactCount={stem.artifact_count}
                   username={stem.owner_username}
                   showAuthor
                 />

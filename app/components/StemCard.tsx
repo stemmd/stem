@@ -7,7 +7,7 @@ interface StemCardProps {
   title: string;
   emoji?: string;
   description?: string | null;
-  findCount: number;
+  artifactCount: number;
   visibility?: Visibility;
   username?: string;
   showAuthor?: boolean;
@@ -19,7 +19,7 @@ export function StemCard({
   title,
   emoji,
   description,
-  findCount,
+  artifactCount,
   visibility = "public",
   username,
   showAuthor = false,
@@ -34,11 +34,11 @@ export function StemCard({
         {showAuthor && username && (
           <span style={styles.author}>@{username}</span>
         )}
-        <span style={styles.finds}>
+        <span style={styles.artifacts}>
           {visibility !== "public" && (
             <span style={styles.visBadge}>{visibility}</span>
           )}
-          {findCount} {findCount === 1 ? "find" : "finds"}
+          {artifactCount} {artifactCount === 1 ? "artifact" : "artifacts"}
         </span>
       </div>
     </Link>
@@ -87,7 +87,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: "var(--ink-light)",
   },
-  finds: {
+  artifacts: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 12,
     color: "var(--ink-light)",

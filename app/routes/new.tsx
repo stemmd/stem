@@ -228,7 +228,7 @@ export default function New() {
             <label style={styles.branchToggleRow}>
               <span style={styles.branchToggleLabel}>
                 <span style={styles.branchToggleTitle}>Make this a Branch</span>
-                <span style={styles.branchToggleHint}>Invite co-curators who can add finds directly</span>
+                <span style={styles.branchToggleHint}>Invite co-curators who can add artifacts directly</span>
               </span>
               <input
                 type="hidden"

@@ -16,7 +16,7 @@ interface StemRow {
   status: string;
   created_at: string;
   username: string;
-  find_count: number;
+  artifact_count: number;
 }
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
@@ -28,7 +28,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   let query = `
     SELECT s.id, s.title, s.slug, s.emoji, s.visibility, s.status, s.created_at,
            u.username,
-           (SELECT COUNT(*) FROM finds f WHERE f.stem_id = s.id AND f.status = 'approved') as find_count
+           (SELECT COUNT(*) FROM artifacts f WHERE f.stem_id = s.id AND f.status = 'approved') as artifact_count
     FROM stems s
     JOIN users u ON u.id = s.user_id
   `;
@@ -63,7 +63,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     const db = context.cloudflare.env.DB;
     await db.batch([
-      db.prepare("DELETE FROM finds WHERE stem_id = ?").bind(stemId),
+      db.prepare("DELETE FROM artifacts WHERE stem_id = ?").bind(stemId),
       db.prepare("DELETE FROM stem_categories WHERE stem_id = ?").bind(stemId),
       db.prepare("DELETE FROM stem_follows WHERE stem_id = ?").bind(stemId),
       db.prepare("DELETE FROM stems WHERE id = ?").bind(stemId),
@@ -134,7 +134,7 @@ export default function AdminStems() {
               <th style={styles.th}></th>
               <th style={styles.th}>Title</th>
               <th style={styles.th}>Owner</th>
-              <th data-hide-mobile style={{ ...styles.th, textAlign: "right" }}>Finds</th>
+              <th data-hide-mobile style={{ ...styles.th, textAlign: "right" }}>Artifacts</th>
               <th data-hide-mobile style={styles.th}>Visibility</th>
               <th data-hide-mobile style={styles.th}>Status</th>
               <th data-hide-mobile style={styles.th}>Created</th>
@@ -161,7 +161,7 @@ export default function AdminStems() {
                   </Link>
                 </td>
                 <td data-hide-mobile style={{ ...styles.td, textAlign: "right", ...styles.mono }}>
-                  {stem.find_count}
+                  {stem.artifact_count}
                 </td>
                 <td data-hide-mobile style={styles.td}>
                   <VisibilityBadge visibility={stem.visibility} />
@@ -262,7 +262,7 @@ function DeleteButton({ stemId, title }: { stemId: string; title: string }) {
       <button
         type="submit"
         onClick={(e) => {
-          if (!confirm(`Delete stem "${title}"? This will also delete all its finds, categories, and follows.`)) {
+          if (!confirm(`Delete stem "${title}"? This will also delete all its artifacts, categories, and follows.`)) {
             e.preventDefault();
           }
         }}

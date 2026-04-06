@@ -54,16 +54,16 @@ function notificationText(n: NotificationRow): { text: string; href: string } {
           ? `/${n.stem_owner_username}/${n.stem_slug}`
           : `/${n.actor_username}`,
       };
-    case "new_find":
+    case "new_artifact":
       return {
-        text: `${actor} added a find to ${n.stem_title ?? "your stem"}`,
+        text: `${actor} added an artifact to ${n.stem_title ?? "your stem"}`,
         href: n.stem_owner_username && n.stem_slug
           ? `/${n.stem_owner_username}/${n.stem_slug}`
           : "/feed",
       };
-    case "find_approved":
+    case "artifact_approved":
       return {
-        text: `Your find${n.find_title ? ` "${n.find_title}"` : ""} was approved in ${n.stem_title ?? "a stem"}`,
+        text: `Your artifact${n.artifact_title ? ` "${n.artifact_title}"` : ""} was approved in ${n.stem_title ?? "a stem"}`,
         href: n.stem_owner_username && n.stem_slug
           ? `/${n.stem_owner_username}/${n.stem_slug}`
           : "/feed",

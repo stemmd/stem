@@ -5,7 +5,7 @@ import { useLoaderData } from "@remix-run/react";
 interface Stats {
   totalUsers: number;
   totalStems: number;
-  totalFinds: number;
+  totalArtifacts: number;
   pendingWaitlist: number;
   invitedWaitlist: number;
   recentSignups: number;
@@ -23,7 +23,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   const [
     usersResult,
     stemsResult,
-    findsResult,
+    artifactsResult,
     pendingResult,
     invitedResult,
     recentSignupsResult,
@@ -31,7 +31,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   ] = await Promise.all([
     db.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>(),
     db.prepare("SELECT COUNT(*) as count FROM stems").first<{ count: number }>(),
-    db.prepare("SELECT COUNT(*) as count FROM finds").first<{ count: number }>(),
+    db.prepare("SELECT COUNT(*) as count FROM artifacts").first<{ count: number }>(),
     db
       .prepare("SELECT COUNT(*) as count FROM waitlist WHERE invited_at IS NULL")
       .first<{ count: number }>(),
@@ -54,7 +54,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
     stats: {
       totalUsers: usersResult?.count ?? 0,
       totalStems: stemsResult?.count ?? 0,
-      totalFinds: findsResult?.count ?? 0,
+      totalArtifacts: artifactsResult?.count ?? 0,
       pendingWaitlist: pendingResult?.count ?? 0,
       invitedWaitlist: invitedResult?.count ?? 0,
       recentSignups: recentSignupsResult?.count ?? 0,
@@ -70,7 +70,7 @@ const STAT_CARDS: {
 }[] = [
   { key: "totalUsers", label: "Total Users" },
   { key: "totalStems", label: "Total Stems" },
-  { key: "totalFinds", label: "Total Finds" },
+  { key: "totalArtifacts", label: "Total Artifacts" },
   { key: "pendingWaitlist", label: "Pending Waitlist" },
   { key: "invitedWaitlist", label: "Invited Waitlist" },
   { key: "recentSignups", label: "New Users", subtitle: "last 7 days" },

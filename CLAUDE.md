@@ -8,7 +8,8 @@ The guilt-free doomscroll. A breath of fresh air from political, divisive social
 
 ## Terminology
 - **Stem** -- a topic collection (e.g. "Byzantine Architecture")
-- **Find** -- a link/resource inside a stem
+- **Artifact** -- a link, note, or resource inside a stem (formerly "find")
+- **Node** -- an organizational sub-topic within a stem (supports 3-level nesting)
 - **Branch** -- a collaborative stem with co-curators (DB: `is_branch`, `branch_members`)
 - **Trail** -- marketing/brand term only, never used in authenticated app UI
 - **Feed** -- personalized stream from people and stems you follow

@@ -94,7 +94,7 @@ export default function Import() {
   };
 
   const selectedStems = stems.filter((s) => s.selected);
-  const totalFinds = selectedStems.reduce((sum, s) => sum + s.finds.length, 0);
+  const totalArtifacts = selectedStems.reduce((sum, s) => sum + s.artifacts.length, 0);
 
   const handleImport = () => {
     if (selectedStems.length === 0) return;
@@ -109,7 +109,7 @@ export default function Import() {
         emoji: s.emoji,
         categoryId: s.categoryId,
         visibility: s.visibility,
-        finds: s.finds.map((f) => ({
+        artifacts: s.artifacts.map((f) => ({
           url: f.url,
           title: f.title,
           source_type: f.source_type,
@@ -224,7 +224,7 @@ export default function Import() {
                         style={styles.stemTitleInput}
                       />
                     </label>
-                    <span style={styles.findCount}>{stem.finds.length} finds</span>
+                    <span style={styles.artifactCount}>{stem.artifacts.length} artifacts</span>
                   </div>
 
                   <p style={styles.stemDesc}>{stem.description}</p>
@@ -244,12 +244,12 @@ export default function Import() {
                   </div>
 
                   {stem.selected && (
-                    <div style={styles.findPreview}>
-                      {stem.finds.slice(0, 5).map((f, i) => (
-                        <p key={i} style={styles.findTitle}>{f.title}</p>
+                    <div style={styles.artifactPreview}>
+                      {stem.artifacts.slice(0, 5).map((f, i) => (
+                        <p key={i} style={styles.artifactTitle}>{f.title}</p>
                       ))}
-                      {stem.finds.length > 5 && (
-                        <p style={styles.findMore}>+{stem.finds.length - 5} more</p>
+                      {stem.artifacts.length > 5 && (
+                        <p style={styles.artifactMore}>+{stem.artifacts.length - 5} more</p>
                       )}
                     </div>
                   )}
@@ -259,7 +259,7 @@ export default function Import() {
 
             <div style={styles.importBar}>
               <p style={styles.importSummary}>
-                {selectedStems.length} stems with {totalFinds} finds
+                {selectedStems.length} stems with {totalArtifacts} artifacts
               </p>
               <button
                 onClick={handleImport}
@@ -423,7 +423,7 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
     minWidth: 0,
   },
-  findCount: {
+  artifactCount: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 12,
     color: "var(--ink-light)",
@@ -451,14 +451,14 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
     cursor: "pointer",
   },
-  findPreview: {
+  artifactPreview: {
     marginTop: 10,
     marginLeft: 30,
     display: "flex",
     flexDirection: "column" as const,
     gap: 3,
   },
-  findTitle: {
+  artifactTitle: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 13,
     color: "var(--ink-mid)",
@@ -466,7 +466,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  findMore: {
+  artifactMore: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 12,
     color: "var(--ink-light)",
