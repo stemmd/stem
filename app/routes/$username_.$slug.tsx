@@ -104,6 +104,9 @@ interface Artifact {
   source_type: string;
   embed_url: string | null;
   body: string | null;
+  file_key: string | null;
+  file_mime: string | null;
+  file_size: number | null;
   created_at: string;
   contributor_username: string;
   added_by: string;
@@ -141,7 +144,9 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
 
   const artifactsSql = `
     SELECT f.id, f.url, f.title, f.description, f.image_url, f.favicon_url,
-           f.note, f.quote, f.source_type, f.embed_url, f.body, f.created_at, f.added_by,
+           f.note, f.quote, f.source_type, f.embed_url, f.body,
+           f.file_key, f.file_mime, f.file_size,
+           f.created_at, f.added_by,
            u.username as contributor_username
     FROM artifacts f JOIN users u ON u.id = f.added_by
     WHERE f.stem_id = ? AND f.status = 'approved'
@@ -150,14 +155,16 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
 
   const pendingSql = `
     SELECT f.id, f.url, f.title, f.description, f.image_url, f.favicon_url,
-           f.note, f.quote, f.source_type, f.embed_url, f.body, f.created_at, f.added_by,
+           f.note, f.quote, f.source_type, f.embed_url, f.body,
+           f.file_key, f.file_mime, f.file_size,
+           f.created_at, f.added_by,
            u.username as contributor_username
     FROM artifacts f JOIN users u ON u.id = f.added_by
     WHERE f.stem_id = ? AND f.status = 'pending'
     ORDER BY f.created_at ASC
   `;
 
-  const [artifactsResult, followCountRow, followRow, pendingResult, mutualRow, branchMemberRow, branchMembersResult, stemCatsResult, nodesResult, artifactNodesResult] = await Promise.all([
+  const [artifactsResult, followCountRow, followRow, pendingResult, mutualRow, branchMemberRow, branchMembersResult, stemCatsResult, nodesResult, artifactNodesResult, approvedLinkRow] = await Promise.all([
     db.prepare(artifactsSql).bind(stem.id).all<Artifact>(),
     db.prepare("SELECT COUNT(*) as c FROM stem_follows WHERE stem_id = ?").bind(stem.id).first<{ c: number }>(),
     user ? db.prepare("SELECT id FROM stem_follows WHERE follower_id = ? AND stem_id = ?").bind(user.id, stem.id).first() : Promise.resolve(null),
@@ -195,7 +202,12 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
       WHERE n.stem_id = ?
       ORDER BY an.position ASC
     `).bind(stem.id).all<ArtifactNode>(),
+    user
+      ? db.prepare("SELECT COUNT(*) as c FROM artifacts WHERE added_by = ? AND status = 'approved' AND url IS NOT NULL").bind(user.id).first<{ c: number }>()
+      : Promise.resolve(null),
   ]);
+
+  const userHasApprovedArtifact = (approvedLinkRow?.c ?? 0) > 0;
 
   const isBranchMember = !!branchMemberRow;
   const isMutual = (mutualRow?.c ?? 0) >= 2;
@@ -220,6 +232,7 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
     stemCategories: stemCatsResult.results,
     nodes: nodesResult.results,
     artifactNodes: artifactNodesResult.results,
+    userHasApprovedArtifact,
   });
 }
 
@@ -229,6 +242,14 @@ async function checkContributionPermission(
   db: D1Database, stem: { id: string; user_id: string; is_branch: number; contribution_mode: string }, userId: string
 ): Promise<{ isOwner: boolean; isBranchMember: boolean; error?: string }> {
   const isOwner = userId === stem.user_id;
+  // Check if stem owner has blocked this user
+  if (!isOwner) {
+    const blocked = await db
+      .prepare("SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?")
+      .bind(stem.user_id, userId)
+      .first();
+    if (blocked) return { isOwner, isBranchMember: false, error: "You cannot contribute to this stem." };
+  }
   const isBranchMember = (!isOwner && stem.is_branch)
     ? !!(await db.prepare("SELECT 1 FROM branch_members WHERE branch_id = ? AND user_id = ?").bind(stem.id, userId).first())
     : false;
@@ -440,6 +461,39 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     await db.prepare(
       "INSERT INTO artifacts (id, stem_id, added_by, title, body, source_type, status) VALUES (?, ?, ?, ?, ?, 'note', ?)"
     ).bind(artifactId, stem.id, user.id, title, body, artifactStatus).run();
+
+    await Promise.all([
+      artifactStatus === "approved"
+        ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
+        : Promise.resolve(),
+      createNotification({
+        db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
+      }),
+    ]);
+
+    return json({ success: true, artifactId, pending: artifactStatus === "pending" });
+  }
+
+  if (intent === "add_file_artifact") {
+    if (stem.visibility === "private") throw new Response("Forbidden", { status: 403 });
+    const { isOwner, isBranchMember, error: permError } = await checkContributionPermission(db, stem, user.id);
+    if (permError) return json({ error: permError }, { status: 403 });
+
+    const fileKey = form.get("file_key") as string;
+    const fileMime = form.get("file_mime") as string;
+    const fileSize = parseInt(form.get("file_size") as string, 10);
+    const title = (form.get("title") as string | null)?.trim() || null;
+    const note = (form.get("note") as string | null)?.trim() || null;
+    const sourceType = form.get("source_type") as string; // "image" or "pdf"
+
+    if (!fileKey || !fileMime) return json({ error: "File upload failed." }, { status: 400 });
+
+    const artifactStatus = (isOwner || isBranchMember) ? "approved" : "pending";
+    const artifactId = `fnd_${nanoid(10)}`;
+
+    await db.prepare(
+      "INSERT INTO artifacts (id, stem_id, added_by, title, note, source_type, file_key, file_mime, file_size, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(artifactId, stem.id, user.id, title, note, sourceType, fileKey, fileMime, fileSize, artifactStatus).run();
 
     await Promise.all([
       artifactStatus === "approved"
@@ -695,7 +749,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function StemPage() {
-  const { stem, artifacts, pendingArtifacts, myPendingArtifacts, user, isOwner, isBranchMember, isFollowing, followCount, canContribute, branchMembers, stemCategories, nodes, artifactNodes } =
+  const { stem, artifacts, pendingArtifacts, myPendingArtifacts, user, isOwner, isBranchMember, isFollowing, followCount, canContribute, branchMembers, stemCategories, nodes, artifactNodes, userHasApprovedArtifact } =
     useLoaderData<typeof loader>();
 
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
@@ -827,6 +881,7 @@ export default function StemPage() {
             isOwner={isOwner}
             stemUsername={stem.username}
             contributionMode={stem.contribution_mode}
+            canUpload={userHasApprovedArtifact}
           />
         )}
         {!canContribute && !isOwner && user && stem.contribution_mode === "mutuals" && !isBranchMember && (
@@ -1140,18 +1195,20 @@ function artifactTypeLabel(type: string): { label: string; emoji: string } {
   return ARTIFACT_TYPES.find((t) => t.value === type) ?? { label: "Article", emoji: "📄" };
 }
 
-type ArtifactTab = "link" | "note" | "image" | "file" | "audio";
+type ArtifactTab = "link" | "note" | "image" | "pdf";
 
 function AddArtifactForm({
   stemId,
   isOwner,
   stemUsername,
   contributionMode,
+  canUpload,
 }: {
   stemId: string;
   isOwner: boolean;
   stemUsername: string;
   contributionMode: string;
+  canUpload: boolean;
 }) {
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
@@ -1161,6 +1218,11 @@ function AddArtifactForm({
   const [tab, setTab] = useState<ArtifactTab>("link");
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBody, setNoteBody] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadNote, setUploadNote] = useState("");
 
   const ogFetcher = useFetcher<OGData>();
   const addFetcher = useFetcher<{ success?: boolean; pending?: boolean; error?: string }>();
@@ -1180,6 +1242,10 @@ function AddArtifactForm({
       setArtifactType("");
       setNoteTitle("");
       setNoteBody("");
+      setUploadFile(null);
+      setUploadError("");
+      setUploadTitle("");
+      setUploadNote("");
     }
   }, [addFetcher.state, addFetcher.data]);
 
@@ -1212,12 +1278,11 @@ function AddArtifactForm({
     );
   }
 
-  const TABS: { key: ArtifactTab; label: string; emoji: string; disabled?: boolean }[] = [
+  const TABS: { key: ArtifactTab; label: string; emoji: string }[] = [
     { key: "link", label: "Link", emoji: "🔗" },
     { key: "note", label: "Note", emoji: "📝" },
-    { key: "image", label: "Image", emoji: "🖼️", disabled: true },
-    { key: "file", label: "File", emoji: "📎", disabled: true },
-    { key: "audio", label: "Audio", emoji: "🎧", disabled: true },
+    { key: "image", label: "Image", emoji: "🖼️" },
+    { key: "pdf", label: "PDF", emoji: "📎" },
   ];
 
   const tabBar = (
@@ -1226,14 +1291,12 @@ function AddArtifactForm({
         <button
           key={t.key}
           type="button"
-          disabled={t.disabled}
-          onClick={() => !t.disabled && setTab(t.key)}
+          onClick={() => setTab(t.key)}
           style={{
             ...styles.tabBtn,
             borderBottomColor: tab === t.key ? "var(--forest)" : "transparent",
-            color: t.disabled ? "var(--ink-light)" : tab === t.key ? "var(--forest)" : "var(--ink-mid)",
-            opacity: t.disabled ? 0.5 : 1,
-            cursor: t.disabled ? "not-allowed" : "pointer",
+            color: tab === t.key ? "var(--forest)" : "var(--ink-mid)",
+            cursor: "pointer",
           }}
         >
           {t.emoji} {t.label}
@@ -1290,21 +1353,127 @@ function AddArtifactForm({
     );
   }
 
-  if (tab === "image" || tab === "file" || tab === "audio") {
+  if (tab === "image" || tab === "pdf") {
+    const isImage = tab === "image";
+    const acceptTypes = isImage ? ".jpg,.jpeg,.png,.webp,.gif" : ".pdf";
+    const maxSize = isImage ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+    const maxLabel = isImage ? "10MB" : "25MB";
+    const sourceType = isImage ? "image" : "pdf";
+
+    if (!canUpload) {
+      return (
+        <div style={styles.addArtifactForm}>
+          {tabBar}
+          <div style={styles.comingSoon}>
+            <p style={styles.comingSoonText}>
+              {isImage ? "🖼️" : "📎"}
+            </p>
+            <p style={styles.comingSoonText}>
+              Add a link first to unlock file uploads
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setUploadError("");
+      const file = e.target.files?.[0];
+      if (!file) { setUploadFile(null); return; }
+      if (file.size > maxSize) {
+        setUploadError(`File is too large (max ${maxLabel})`);
+        setUploadFile(null);
+        e.target.value = "";
+        return;
+      }
+      setUploadFile(file);
+    };
+
+    const formatFileSize = (bytes: number) => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const handleUpload = async () => {
+      if (!uploadFile) return;
+      setUploading(true);
+      setUploadError("");
+      try {
+        const formData = new FormData();
+        formData.append("file", uploadFile);
+        const res = await fetch("https://api.stem.md/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error || "Upload failed");
+        }
+        const data = await res.json() as { file_key: string; file_mime: string; file_size: number };
+        // Auto-submit the Remix form with the file metadata
+        const remixForm = new FormData();
+        remixForm.set("intent", "add_file_artifact");
+        remixForm.set("file_key", data.file_key);
+        remixForm.set("file_mime", data.file_mime);
+        remixForm.set("file_size", String(data.file_size));
+        remixForm.set("source_type", sourceType);
+        if (uploadTitle.trim()) remixForm.set("title", uploadTitle.trim());
+        if (uploadNote.trim()) remixForm.set("note", uploadNote.trim());
+        addFetcher.submit(remixForm, { method: "post" });
+      } catch (err: unknown) {
+        setUploadError(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setUploading(false);
+      }
+    };
+
     return (
       <div style={styles.addArtifactForm}>
         {tabBar}
-        <div style={styles.comingSoon}>
-          <p style={styles.comingSoonText}>
-            {tab === "image" ? "🖼️" : tab === "file" ? "📎" : "🎧"}
+        <input
+          type="file"
+          accept={acceptTypes}
+          onChange={handleFileSelect}
+          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "var(--ink)", marginBottom: 8 }}
+        />
+        {uploadFile && (
+          <p style={{ fontSize: 13, color: "var(--ink-mid)", fontFamily: "'DM Mono', monospace", margin: "4px 0 8px" }}>
+            {uploadFile.name} ({formatFileSize(uploadFile.size)})
           </p>
-          <p style={styles.comingSoonText}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)} uploads coming soon
+        )}
+        <input
+          type="text"
+          value={uploadTitle}
+          onChange={(e) => setUploadTitle(e.target.value)}
+          placeholder="Title (optional)"
+          style={styles.noteInput}
+        />
+        <input
+          type="text"
+          value={uploadNote}
+          onChange={(e) => setUploadNote(e.target.value)}
+          placeholder="Add a note (optional)"
+          style={styles.noteInput}
+        />
+        <button
+          type="button"
+          disabled={!uploadFile || uploading || submitting}
+          onClick={handleUpload}
+          style={{
+            ...styles.addBtn,
+            opacity: !uploadFile || uploading || submitting ? 0.5 : 1,
+          }}
+        >
+          {uploading ? "Uploading..." : submitting ? "Saving..." : `Upload ${isImage ? "image" : "PDF"}`}
+        </button>
+        {uploadError && (
+          <p style={{ fontSize: 13, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>
+            {uploadError}
           </p>
-          <p style={{ ...styles.comingSoonText, fontSize: 12, color: "var(--ink-light)" }}>
-            For now, you can share links or write notes
-          </p>
-        </div>
+        )}
+        {feedbackMessages}
       </div>
     );
   }
@@ -2259,11 +2428,19 @@ function ArtifactCard({
   if (isDeleting) return null;
 
   const isNote = artifact.source_type === "note";
+  const isFileUpload = !!artifact.file_key && (artifact.source_type === "image" || artifact.source_type === "pdf");
   const domain = artifact.url ? getDomain(artifact.url) : null;
   const showContributor = artifact.contributor_username !== stemUsername;
-  const embedId = !isNote && artifact.embed_url ? null : (!isNote && artifact.source_type === "youtube" && artifact.url ? extractYouTubeId(artifact.url) : null);
-  const embedUrl = !isNote ? (artifact.embed_url || (embedId ? `https://www.youtube.com/embed/${embedId}` : null)) : null;
+  const embedId = !isNote && !isFileUpload && artifact.embed_url ? null : (!isNote && !isFileUpload && artifact.source_type === "youtube" && artifact.url ? extractYouTubeId(artifact.url) : null);
+  const embedUrl = !isNote && !isFileUpload ? (artifact.embed_url || (embedId ? `https://www.youtube.com/embed/${embedId}` : null)) : null;
   const typeInfo = artifactTypeLabel(artifact.source_type);
+
+  const formatBytes = (bytes: number | null) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <div style={styles.artifactCard}>
@@ -2302,8 +2479,93 @@ function ArtifactCard({
         </div>
       )}
 
+      {/* File-type artifact (image) */}
+      {isFileUpload && artifact.source_type === "image" && (
+        <div style={styles.artifactBody}>
+          <img
+            src={`https://api.stem.md/files/${artifact.file_key}`}
+            alt={artifact.title || "Uploaded image"}
+            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8, display: "block" }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          {artifact.title && (
+            <p style={{ ...styles.artifactTitle, cursor: "default", marginBottom: 4 }}>{artifact.title}</p>
+          )}
+          {artifact.note && <p style={styles.artifactNote}>{artifact.note}</p>}
+          <div style={styles.artifactFooter}>
+            <span style={styles.artifactTypeBadge}>🖼️</span>
+            {showContributor && (
+              <span style={styles.contributor}>by @{artifact.contributor_username}</span>
+            )}
+            <span style={styles.timestamp}>{formatRelative(artifact.created_at)}</span>
+            {canEdit && (
+              <deleteFetcher.Form method="post">
+                <input type="hidden" name="intent" value="delete_artifact" />
+                <input type="hidden" name="artifactId" value={artifact.id} />
+                <button type="submit" style={styles.deleteBtn} title="Remove artifact">×</button>
+              </deleteFetcher.Form>
+            )}
+          </div>
+          {nodeNames && nodeNames.length > 0 && (
+            <div style={styles.alsoInRow}>
+              <span style={styles.alsoInLabel}>Also in:</span>
+              {nodeNames.map((name) => (
+                <span key={name} style={styles.alsoInTag}>{name}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* File-type artifact (PDF) */}
+      {isFileUpload && artifact.source_type === "pdf" && (
+        <div style={styles.artifactBody}>
+          <a
+            href={`https://api.stem.md/files/${artifact.file_key}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "12px 0" }}
+          >
+            <span style={{ fontSize: 28, flexShrink: 0 }}>📄</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ ...styles.artifactTitle, marginBottom: 2 }}>
+                {artifact.title || "Download PDF"}
+              </p>
+              {artifact.file_size && (
+                <span style={{ fontSize: 12, color: "var(--ink-light)", fontFamily: "'DM Mono', monospace" }}>
+                  {formatBytes(artifact.file_size)}
+                </span>
+              )}
+            </div>
+          </a>
+          {artifact.note && <p style={styles.artifactNote}>{artifact.note}</p>}
+          <div style={styles.artifactFooter}>
+            <span style={styles.artifactTypeBadge}>📎</span>
+            {showContributor && (
+              <span style={styles.contributor}>by @{artifact.contributor_username}</span>
+            )}
+            <span style={styles.timestamp}>{formatRelative(artifact.created_at)}</span>
+            {canEdit && (
+              <deleteFetcher.Form method="post">
+                <input type="hidden" name="intent" value="delete_artifact" />
+                <input type="hidden" name="artifactId" value={artifact.id} />
+                <button type="submit" style={styles.deleteBtn} title="Remove artifact">×</button>
+              </deleteFetcher.Form>
+            )}
+          </div>
+          {nodeNames && nodeNames.length > 0 && (
+            <div style={styles.alsoInRow}>
+              <span style={styles.alsoInLabel}>Also in:</span>
+              {nodeNames.map((name) => (
+                <span key={name} style={styles.alsoInTag}>{name}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Link-type artifact */}
-      {!isNote && embedUrl && (
+      {!isNote && !isFileUpload && embedUrl && (
         <iframe
           src={embedUrl}
           style={{ width: "100%", aspectRatio: "16/9", border: "none", borderRadius: 8, display: "block" }}
@@ -2311,7 +2573,7 @@ function ArtifactCard({
           allowFullScreen
         />
       )}
-      {!isNote && <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+      {!isNote && !isFileUpload && <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
       {!embedUrl && artifact.image_url && (
         <img
           src={artifact.image_url}

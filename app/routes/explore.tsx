@@ -54,6 +54,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       whereExtra += " AND s.title LIKE ?";
       bindings.push(`%${q}%`);
     }
+    whereExtra += " AND s.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)";
+    bindings.push(user.id);
 
     const stems = await db
       .prepare(`
@@ -94,10 +96,11 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         FROM stems s
         JOIN users u ON u.id = s.user_id
         WHERE s.visibility = 'public' AND s.title LIKE ?
+          AND s.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
         ORDER BY s.updated_at DESC
         LIMIT ${EXPLORE_PAGE + 1} OFFSET ${offset}
       `)
-      .bind(`%${q}%`)
+      .bind(`%${q}%`, user.id)
       .all<ExploreStem>();
 
     const hasMore = stems.results.length > EXPLORE_PAGE;
@@ -121,9 +124,10 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       FROM stems s
       JOIN users u ON u.id = s.user_id
       WHERE s.visibility = 'public'
+        AND s.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
       ORDER BY s.updated_at DESC
       LIMIT 6
-    `).all<ExploreStem>(),
+    `).bind(user.id).all<ExploreStem>(),
 
     db.prepare(`
       SELECT sc.category_id, COUNT(DISTINCT sc.stem_id) as stem_count
@@ -142,10 +146,12 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       LEFT JOIN stems s ON s.user_id = u.id AND s.visibility = 'public'
       LEFT JOIN user_follows uf ON uf.following_id = u.id
       WHERE u.id IS NOT NULL
+        AND u.id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
+        AND u.id NOT IN (SELECT user_id FROM user_blocks WHERE blocked_user_id = ?)
       GROUP BY u.id
       ORDER BY follower_count DESC, stem_count DESC
       LIMIT 8
-    `).all<Omit<ExploreUser, "isFollowing">>(),
+    `).bind(user.id, user.id).all<Omit<ExploreUser, "isFollowing">>(),
   ]);
 
   let followingIds = new Set<string>();

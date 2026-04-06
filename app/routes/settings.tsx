@@ -19,11 +19,23 @@ export const meta: MetaFunction = () => [{ title: "Settings — Stem" }];
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const user = await requireUser(request, context);
   const db = context.cloudflare.env.DB;
-  const interestsResult = await db
-    .prepare("SELECT category_id FROM user_interests WHERE user_id = ?")
-    .bind(user.id)
-    .all<{ category_id: string }>();
-  return json({ user, interests: interestsResult.results.map((r) => r.category_id) });
+  const [interestsResult, blockedUsersResult] = await Promise.all([
+    db
+      .prepare("SELECT category_id FROM user_interests WHERE user_id = ?")
+      .bind(user.id)
+      .all<{ category_id: string }>(),
+    db
+      .prepare(
+        "SELECT ub.id, ub.blocked_user_id, u.username, u.display_name FROM user_blocks ub JOIN users u ON u.id = ub.blocked_user_id WHERE ub.user_id = ?"
+      )
+      .bind(user.id)
+      .all<{ id: string; blocked_user_id: string; username: string; display_name: string | null }>(),
+  ]);
+  return json({
+    user,
+    interests: interestsResult.results.map((r) => r.category_id),
+    blockedUsers: blockedUsersResult.results,
+  });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -486,8 +498,47 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return arr;
 }
 
+function BlockedUserRow({ blockedUser }: { blockedUser: { id: string; blocked_user_id: string; username: string; display_name: string | null } }) {
+  const fetcher = useFetcher();
+  const isUnblocking = fetcher.state !== "idle";
+  if (fetcher.data && (fetcher.data as { success?: boolean }).success) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div>
+        <Link to={`/${blockedUser.username}`} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "var(--ink)", textDecoration: "none" }}>
+          {blockedUser.display_name || blockedUser.username}
+        </Link>
+        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--ink-light)", marginTop: 2 }}>
+          @{blockedUser.username}
+        </p>
+      </div>
+      <fetcher.Form method="post" action="/api/block">
+        <input type="hidden" name="intent" value="unblock" />
+        <input type="hidden" name="blocked_user_id" value={blockedUser.blocked_user_id} />
+        <button
+          type="submit"
+          disabled={isUnblocking}
+          style={{
+            padding: "6px 14px",
+            background: "transparent",
+            border: "1px solid var(--paper-dark)",
+            borderRadius: 8,
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 12,
+            color: "var(--ink-mid)",
+            cursor: isUnblocking ? "wait" : "pointer",
+            opacity: isUnblocking ? 0.6 : 1,
+          }}
+        >
+          {isUnblocking ? "Unblocking..." : "Unblock"}
+        </button>
+      </fetcher.Form>
+    </div>
+  );
+}
+
 export default function Settings() {
-  const { user, interests } = useLoaderData<typeof loader>();
+  const { user, interests, blockedUsers } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
   const [searchParams] = useSearchParams();
@@ -729,6 +780,20 @@ export default function Settings() {
               Get it
             </Link>
           </div>
+        </section>
+
+        {/* Blocked users */}
+        <section style={{ ...styles.section, marginTop: 48 }}>
+          <h2 style={styles.sectionHeading}>Blocked users</h2>
+          {blockedUsers.length === 0 ? (
+            <p style={styles.hint}>You haven't blocked anyone</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              {blockedUsers.map((bu) => (
+                <BlockedUserRow key={bu.id} blockedUser={bu} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Danger zone */}

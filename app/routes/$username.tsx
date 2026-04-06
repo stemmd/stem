@@ -93,7 +93,7 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
 
   if (!profile) throw new Response("Not found", { status: 404 });
 
-  const [stemsResult, stemCategoriesResult, followerRow, followingRow, followRow] = await Promise.all([
+  const [stemsResult, stemCategoriesResult, followerRow, followingRow, followRow, blockRow] = await Promise.all([
     db
       .prepare(`
         SELECT s.id, s.title, s.slug, s.description, s.emoji, s.updated_at, s.visibility,
@@ -131,6 +131,13 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
           .bind(user.id, profile.id)
           .first()
       : Promise.resolve(null),
+
+    user && user.id !== profile.id
+      ? db
+          .prepare("SELECT id FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?")
+          .bind(user.id, profile.id)
+          .first()
+      : Promise.resolve(null),
   ]);
 
   const gravatarUrl = await getGravatarUrl(profile.email);
@@ -146,6 +153,7 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
     page,
     user,
     isFollowing: !!followRow,
+    isBlocked: !!blockRow,
     followerCount: followerRow?.c ?? 0,
     followingCount: followingRow?.c ?? 0,
     gravatarUrl,
@@ -201,12 +209,14 @@ export default function UserProfile() {
     page: initialPage,
     user,
     isFollowing,
+    isBlocked,
     followerCount,
     followingCount,
     gravatarUrl,
   } = useLoaderData<typeof loader>();
 
   const fetcher = useFetcher();
+  const blockFetcher = useFetcher();
   const moreStemsFetcher = useFetcher<{
     stems: ProfileStem[];
     stemCategories: StemCategory[];
@@ -251,6 +261,12 @@ export default function UserProfile() {
     fetcher.formData
       ? fetcher.formData.get("action") === "follow"
       : isFollowing;
+
+  // Optimistic block state
+  const optimisticBlocked =
+    blockFetcher.formData
+      ? blockFetcher.formData.get("intent") === "block"
+      : isBlocked;
 
   const initials = (profile.display_name || profile.username)
     .slice(0, 2)
@@ -339,24 +355,38 @@ export default function UserProfile() {
             {!isOwnProfile && (
               <div style={styles.followWrap}>
                 {user ? (
-                  <fetcher.Form method="post" action={`/api/users/${profile.id}/follow`}>
-                    <input
-                      type="hidden"
-                      name="action"
-                      value={optimisticFollowing ? "unfollow" : "follow"}
-                    />
-                    <button
-                      type="submit"
-                      style={{
-                        ...styles.followBtn,
-                        background: optimisticFollowing ? "transparent" : "var(--forest)",
-                        color: optimisticFollowing ? "var(--forest)" : "#fff",
-                        border: optimisticFollowing ? "1px solid var(--forest)" : "none",
-                      }}
-                    >
-                      {optimisticFollowing ? "Following" : "Follow"}
-                    </button>
-                  </fetcher.Form>
+                  <>
+                    <fetcher.Form method="post" action={`/api/users/${profile.id}/follow`}>
+                      <input
+                        type="hidden"
+                        name="action"
+                        value={optimisticFollowing ? "unfollow" : "follow"}
+                      />
+                      <button
+                        type="submit"
+                        style={{
+                          ...styles.followBtn,
+                          background: optimisticFollowing ? "transparent" : "var(--forest)",
+                          color: optimisticFollowing ? "var(--forest)" : "#fff",
+                          border: optimisticFollowing ? "1px solid var(--forest)" : "none",
+                        }}
+                      >
+                        {optimisticFollowing ? "Following" : "Follow"}
+                      </button>
+                    </fetcher.Form>
+                    <blockFetcher.Form method="post" action="/api/block">
+                      <input type="hidden" name="blocked_user_id" value={profile.id} />
+                      <input type="hidden" name="intent" value={optimisticBlocked ? "unblock" : "block"} />
+                      <button
+                        type="submit"
+                        style={styles.blockBtn}
+                      >
+                        <span style={{ color: optimisticBlocked ? "var(--taken)" : "var(--ink-light)" }}>
+                          {optimisticBlocked ? "Blocked" : "Block"}
+                        </span>
+                      </button>
+                    </blockFetcher.Form>
+                  </>
                 ) : (
                   <Link
                     to="/signin"
@@ -518,6 +548,9 @@ const styles: Record<string, React.CSSProperties> = {
 
   followWrap: {
     marginTop: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
   },
   followBtn: {
     display: "inline-block",
@@ -530,6 +563,15 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     transition: "all 0.15s",
     whiteSpace: "nowrap" as const,
+  },
+
+  blockBtn: {
+    background: "none",
+    border: "none",
+    padding: "4px 0",
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
+    cursor: "pointer",
   },
 
   categoryHeading: {

@@ -36,7 +36,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const before = url.searchParams.get("before");
 
-  const bindings: (string | null)[] = [user.id, user.id, user.id, user.id, user.id, user.id];
+  const bindings: (string | null)[] = [user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id];
   let beforeClause = "";
   if (before) {
     beforeClause = " AND f.created_at < ?";
@@ -69,7 +69,9 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
           s.user_id = ?
           OR s.id IN (SELECT stem_id FROM stem_follows WHERE follower_id = ?)
           OR s.user_id IN (SELECT following_id FROM user_follows WHERE follower_id = ?)
-        )${beforeClause}
+        )
+        AND f.added_by NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)
+        AND su.id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE user_id = ?)${beforeClause}
       ORDER BY f.created_at DESC
       LIMIT ${PAGE_SIZE + 1}
     `)
