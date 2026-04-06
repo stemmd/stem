@@ -535,6 +535,9 @@ const organicStyles: Record<string, React.CSSProperties> = {
   trunk: {
     position: "relative",
     width: 4,
+    minHeight: 100,
+    height: "100%",
+    alignSelf: "stretch",
     background: "var(--forest)",
     borderRadius: 2,
     justifySelf: "center",
