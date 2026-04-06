@@ -488,7 +488,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     const newNote = (form.get("note") as string | null)?.trim() || null;
     const newQuote = (form.get("quote") as string | null)?.trim() || null;
     const newType = (form.get("artifact_type") as string | null)?.trim() || null;
-    const VALID_TYPES = ["article","book","paper","podcast","video","tool","person","place","concept","wikipedia","youtube","arxiv"];
+    const VALID_TYPES = ["article","book","paper","podcast","video","tool","person","place","concept","wikipedia","youtube","arxiv","note","image","pdf","audio"];
     const finalType = newType && VALID_TYPES.includes(newType) ? newType : null;
 
     await db
@@ -518,10 +518,11 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     if (parentId) {
       let depth = 0;
       let currentId: string | null = parentId;
-      while (currentId) {
-        const parent = await db.prepare("SELECT parent_id FROM nodes WHERE id = ?")
-          .bind(currentId).first<{ parent_id: string | null }>();
-        currentId = parent?.parent_id ?? null;
+      while (currentId && depth < 5) {
+        const parent = await db.prepare("SELECT parent_id, stem_id FROM nodes WHERE id = ?")
+          .bind(currentId).first<{ parent_id: string | null; stem_id: string }>();
+        if (!parent || parent.stem_id !== stem.id) break;
+        currentId = parent.parent_id;
         depth++;
       }
       if (depth >= 3) {
@@ -620,7 +621,9 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
   if (intent === "reorder_nodes") {
     if (user.id !== stem.user_id) throw new Response("Forbidden", { status: 403 });
-    const nodeIds = JSON.parse(form.get("nodeIds") as string) as string[];
+    let nodeIds: string[];
+    try { nodeIds = JSON.parse(form.get("nodeIds") as string); }
+    catch { return json({ error: "Invalid node order data." }, { status: 400 }); }
     await db.batch(
       nodeIds.map((id, i) =>
         db.prepare("UPDATE nodes SET position = ? WHERE id = ? AND stem_id = ?")
@@ -697,6 +700,7 @@ export default function StemPage() {
 
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [mapView, setMapView] = useState(false);
+  const [showPendingNodes, setShowPendingNodes] = useState(false);
 
   // Build node tree and artifact mapping (memoized to avoid recomputation on state changes)
   const { approvedNodes, pendingNodes, rootNodes, childNodesMap, artifactToNodes, nodeToArtifacts, artifactsById, rootArtifacts, hasNodes } = useMemo(() => {
@@ -929,15 +933,18 @@ export default function StemPage() {
         {/* Pending nodes (owner review) */}
         {isOwner && pendingNodes.length > 0 && (
           <div style={styles.pendingSection}>
-            <button style={styles.pendingToggle} onClick={() => {}}>
+            <button style={styles.pendingToggle} onClick={() => setShowPendingNodes(!showPendingNodes)}>
               <span style={styles.pendingCount}>{pendingNodes.length}</span>
               {" pending node suggestion" + (pendingNodes.length > 1 ? "s" : "")}
+              <span style={{ marginLeft: 6, fontSize: 10 }}>{showPendingNodes ? "▾" : "��"}</span>
             </button>
-            <div style={styles.pendingList}>
-              {pendingNodes.map((node) => (
-                <PendingNodeRow key={node.id} node={node} stemId={stem.id} />
-              ))}
-            </div>
+            {showPendingNodes && (
+              <div style={styles.pendingList}>
+                {pendingNodes.map((node) => (
+                  <PendingNodeRow key={node.id} node={node} stemId={stem.id} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2367,7 +2374,9 @@ function ExportButton({ stem, artifacts }: { stem: Stem; artifacts: Artifact[] }
       "---",
       "",
       ...artifacts.map(
-        (f) => `- [${f.title || f.url}](${f.url})${f.note ? `\n  > ${f.note}` : ""}`
+        (f) => f.source_type === "note"
+          ? `- ${f.title || "Note"}${f.body ? `\n  ${f.body.slice(0, 500)}` : ""}${f.note ? `\n  > ${f.note}` : ""}`
+          : `- [${f.title || f.url}](${f.url})${f.note ? `\n  > ${f.note}` : ""}`
       ),
     ].join("\n");
 
