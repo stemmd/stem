@@ -5,7 +5,7 @@ import type {
 } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import { Link, useFetcher, useLoaderData } from "@remix-run/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getUser, requireUser } from "~/lib/auth.server";
 import { fetchOG, type OGData } from "~/lib/og.server";
 import { extractYouTubeId, formatRelative, getDomain, isHttpUrl } from "~/lib/utils";
@@ -223,6 +223,27 @@ export async function loader({ request, params, context }: LoaderFunctionArgs) {
   });
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+async function checkContributionPermission(
+  db: D1Database, stem: { id: string; user_id: string; is_branch: number; contribution_mode: string }, userId: string
+): Promise<{ isOwner: boolean; isBranchMember: boolean; error?: string }> {
+  const isOwner = userId === stem.user_id;
+  const isBranchMember = (!isOwner && stem.is_branch)
+    ? !!(await db.prepare("SELECT 1 FROM branch_members WHERE branch_id = ? AND user_id = ?").bind(stem.id, userId).first())
+    : false;
+  if (!isOwner && !isBranchMember) {
+    if (stem.contribution_mode === "closed") return { isOwner, isBranchMember, error: "This stem is not accepting suggestions." };
+    if (stem.contribution_mode === "mutuals") {
+      const mutualRow = await db.prepare(
+        "SELECT COUNT(*) as c FROM user_follows WHERE (follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)"
+      ).bind(userId, stem.user_id, stem.user_id, userId).first<{ c: number }>();
+      if ((mutualRow?.c ?? 0) < 2) return { isOwner, isBranchMember, error: "Only mutuals can contribute to this stem." };
+    }
+  }
+  return { isOwner, isBranchMember };
+}
+
 // ── Action ────────────────────────────────────────────────────────────────────
 
 export async function action({ request, params, context }: ActionFunctionArgs) {
@@ -326,25 +347,8 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
   if (intent === "add_artifact") {
     if (stem.visibility === "private") throw new Response("Forbidden", { status: 403 });
-
-    const isOwner = user.id === stem.user_id;
-    const isBranchMember = (!isOwner && stem.is_branch)
-      ? !!(await db.prepare("SELECT 1 FROM branch_members WHERE branch_id = ? AND user_id = ?").bind(stem.id, user.id).first())
-      : false;
-
-    if (!isOwner && !isBranchMember) {
-      if (stem.contribution_mode === "closed") {
-        return json({ error: "This stem is not accepting suggestions." }, { status: 403 });
-      }
-      if (stem.contribution_mode === "mutuals") {
-        const mutualRow = await db.prepare(
-          "SELECT COUNT(*) as c FROM user_follows WHERE (follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)"
-        ).bind(user.id, stem.user_id, stem.user_id, user.id).first<{ c: number }>();
-        if ((mutualRow?.c ?? 0) < 2) {
-          return json({ error: "Only mutuals can suggest artifacts for this stem." }, { status: 403 });
-        }
-      }
-    }
+    const { isOwner, isBranchMember, error: permError } = await checkContributionPermission(db, stem, user.id);
+    if (permError) return json({ error: permError }, { status: 403 });
 
     const url = (form.get("url") as string | null)?.trim();
     if (!url) return json({ error: "URL is required." }, { status: 400 });
@@ -406,40 +410,22 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       .bind(artifactId, stem.id, user.id, url, og.title, og.description, og.image, og.favicon, note, quote, og.source_type, og.embed_url, artifactStatus)
       .run();
 
-    if (artifactStatus === "approved") {
-      await db
-        .prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?")
-        .bind(stem.id)
-        .run();
-    }
-
-    // Notify stem owner about new artifact (both pending and approved from others)
-    await createNotification({
-      db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
-    });
+    await Promise.all([
+      artifactStatus === "approved"
+        ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
+        : Promise.resolve(),
+      createNotification({
+        db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
+      }),
+    ]);
 
     return json({ success: true, artifactId, pending: artifactStatus === "pending" });
   }
 
   if (intent === "add_note") {
     if (stem.visibility === "private") throw new Response("Forbidden", { status: 403 });
-    const isOwner = user.id === stem.user_id;
-    const isBranchMember = (!isOwner && stem.is_branch)
-      ? !!(await db.prepare("SELECT 1 FROM branch_members WHERE branch_id = ? AND user_id = ?").bind(stem.id, user.id).first())
-      : false;
-    if (!isOwner && !isBranchMember) {
-      if (stem.contribution_mode === "closed") {
-        return json({ error: "This stem is not accepting suggestions." }, { status: 403 });
-      }
-      if (stem.contribution_mode === "mutuals") {
-        const mutualRow = await db.prepare(
-          "SELECT COUNT(*) as c FROM user_follows WHERE (follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)"
-        ).bind(user.id, stem.user_id, stem.user_id, user.id).first<{ c: number }>();
-        if ((mutualRow?.c ?? 0) < 2) {
-          return json({ error: "Only mutuals can suggest artifacts for this stem." }, { status: 403 });
-        }
-      }
-    }
+    const { isOwner, isBranchMember, error: permError } = await checkContributionPermission(db, stem, user.id);
+    if (permError) return json({ error: permError }, { status: 403 });
 
     const title = (form.get("title") as string | null)?.trim() || null;
     const body = (form.get("body") as string | null)?.trim();
@@ -455,12 +441,14 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       "INSERT INTO artifacts (id, stem_id, added_by, title, body, source_type, status) VALUES (?, ?, ?, ?, ?, 'note', ?)"
     ).bind(artifactId, stem.id, user.id, title, body, artifactStatus).run();
 
-    if (artifactStatus === "approved") {
-      await db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run();
-    }
-    await createNotification({
-      db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
-    });
+    await Promise.all([
+      artifactStatus === "approved"
+        ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
+        : Promise.resolve(),
+      createNotification({
+        db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
+      }),
+    ]);
 
     return json({ success: true, artifactId, pending: artifactStatus === "pending" });
   }
@@ -557,20 +545,9 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
   if (intent === "suggest_node") {
     if (stem.visibility === "private") throw new Response("Forbidden", { status: 403 });
-    const isOwner = user.id === stem.user_id;
-    if (isOwner) return json({ error: "Owners should use create_node." }, { status: 400 });
-
-    if (stem.contribution_mode === "closed") {
-      return json({ error: "This stem is not accepting suggestions." }, { status: 403 });
-    }
-    if (stem.contribution_mode === "mutuals") {
-      const mutualRow = await db.prepare(
-        "SELECT COUNT(*) as c FROM user_follows WHERE (follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)"
-      ).bind(user.id, stem.user_id, stem.user_id, user.id).first<{ c: number }>();
-      if ((mutualRow?.c ?? 0) < 2) {
-        return json({ error: "Only mutuals can suggest nodes for this stem." }, { status: 403 });
-      }
-    }
+    if (user.id === stem.user_id) return json({ error: "Owners should use create_node." }, { status: 400 });
+    const { error: permError } = await checkContributionPermission(db, stem, user.id);
+    if (permError) return json({ error: permError }, { status: 403 });
 
     const title = (form.get("title") as string | null)?.trim();
     if (!title) return json({ error: "Title is required." }, { status: 400 });
@@ -624,22 +601,19 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     if (user.id !== stem.user_id) throw new Response("Forbidden", { status: 403 });
     const nodeId = form.get("nodeId") as string;
 
-    // Delete artifact_nodes links (artifacts go back to root)
-    await db.prepare("DELETE FROM artifact_nodes WHERE node_id = ?").bind(nodeId).run();
+    // Delete all artifact_nodes for this node and its descendants (max 3 levels)
+    await db.prepare(`
+      DELETE FROM artifact_nodes WHERE node_id IN (
+        SELECT id FROM nodes WHERE id = ? OR parent_id = ?
+        OR parent_id IN (SELECT id FROM nodes WHERE parent_id = ?)
+      )
+    `).bind(nodeId, nodeId, nodeId).run();
 
-    // Recursively delete child nodes and their artifact_nodes
-    const children = await db.prepare("SELECT id FROM nodes WHERE parent_id = ?").bind(nodeId).all<{ id: string }>();
-    for (const child of children.results) {
-      await db.prepare("DELETE FROM artifact_nodes WHERE node_id = ?").bind(child.id).run();
-      // Delete grandchildren too
-      const grandchildren = await db.prepare("SELECT id FROM nodes WHERE parent_id = ?").bind(child.id).all<{ id: string }>();
-      for (const gc of grandchildren.results) {
-        await db.prepare("DELETE FROM artifact_nodes WHERE node_id = ?").bind(gc.id).run();
-        await db.prepare("DELETE FROM nodes WHERE id = ?").bind(gc.id).run();
-      }
-      await db.prepare("DELETE FROM nodes WHERE id = ?").bind(child.id).run();
-    }
-
+    // Delete descendant nodes then the node itself
+    await db.prepare(`
+      DELETE FROM nodes WHERE parent_id IN (SELECT id FROM nodes WHERE parent_id = ?)
+    `).bind(nodeId).run();
+    await db.prepare("DELETE FROM nodes WHERE parent_id = ?").bind(nodeId).run();
     await db.prepare("DELETE FROM nodes WHERE id = ? AND stem_id = ?").bind(nodeId, stem.id).run();
     return json({ success: true });
   }
@@ -647,10 +621,12 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
   if (intent === "reorder_nodes") {
     if (user.id !== stem.user_id) throw new Response("Forbidden", { status: 403 });
     const nodeIds = JSON.parse(form.get("nodeIds") as string) as string[];
-    for (let i = 0; i < nodeIds.length; i++) {
-      await db.prepare("UPDATE nodes SET position = ? WHERE id = ? AND stem_id = ?")
-        .bind(i * 1000, nodeIds[i], stem.id).run();
-    }
+    await db.batch(
+      nodeIds.map((id, i) =>
+        db.prepare("UPDATE nodes SET position = ? WHERE id = ? AND stem_id = ?")
+          .bind(i * 1000, id, stem.id)
+      )
+    );
     return json({ success: true });
   }
 
@@ -697,8 +673,9 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     if (!stemTitle || confirmed !== stemTitle.title) {
       return json({ deleteError: "Title doesn't match." });
     }
+    // artifact_nodes must be deleted before nodes (FK dependency)
+    await db.prepare("DELETE FROM artifact_nodes WHERE node_id IN (SELECT id FROM nodes WHERE stem_id = ?)").bind(stem.id).run();
     await Promise.all([
-      db.prepare("DELETE FROM artifact_nodes WHERE node_id IN (SELECT id FROM nodes WHERE stem_id = ?)").bind(stem.id).run(),
       db.prepare("DELETE FROM nodes WHERE stem_id = ?").bind(stem.id).run(),
       db.prepare("DELETE FROM artifacts WHERE stem_id = ?").bind(stem.id).run(),
       db.prepare("DELETE FROM branch_members WHERE branch_id = ?").bind(stem.id).run(),
@@ -721,33 +698,37 @@ export default function StemPage() {
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [mapView, setMapView] = useState(false);
 
-  // Build node tree and artifact mapping
-  const approvedNodes = nodes.filter((n) => n.status === "approved");
-  const pendingNodes = nodes.filter((n) => n.status === "pending");
-  const rootNodes = approvedNodes.filter((n) => !n.parent_id);
-  const childNodesMap = new Map<string, typeof approvedNodes>();
-  for (const n of approvedNodes) {
-    if (n.parent_id) {
-      const siblings = childNodesMap.get(n.parent_id) || [];
-      siblings.push(n);
-      childNodesMap.set(n.parent_id, siblings);
+  // Build node tree and artifact mapping (memoized to avoid recomputation on state changes)
+  const { approvedNodes, pendingNodes, rootNodes, childNodesMap, artifactToNodes, nodeToArtifacts, artifactsById, rootArtifacts, hasNodes } = useMemo(() => {
+    const approved = nodes.filter((n) => n.status === "approved");
+    const pending = nodes.filter((n) => n.status === "pending");
+    const roots = approved.filter((n) => !n.parent_id);
+    const childMap = new Map<string, typeof approved>();
+    for (const n of approved) {
+      if (n.parent_id) {
+        const siblings = childMap.get(n.parent_id) || [];
+        siblings.push(n);
+        childMap.set(n.parent_id, siblings);
+      }
     }
-  }
-  // Map artifact_id → node_ids, and node_id → artifact_ids
-  const artifactToNodes = new Map<string, string[]>();
-  const nodeToArtifacts = new Map<string, string[]>();
-  for (const an of artifactNodes) {
-    const nodes = artifactToNodes.get(an.artifact_id) || [];
-    nodes.push(an.node_id);
-    artifactToNodes.set(an.artifact_id, nodes);
-    const arts = nodeToArtifacts.get(an.node_id) || [];
-    arts.push(an.artifact_id);
-    nodeToArtifacts.set(an.node_id, arts);
-  }
-  const artifactsById = new Map(artifacts.map((a) => [a.id, a]));
-  // Root-level artifacts = not assigned to any node
-  const rootArtifacts = artifacts.filter((a) => !artifactToNodes.has(a.id));
-  const hasNodes = approvedNodes.length > 0;
+    const a2n = new Map<string, string[]>();
+    const n2a = new Map<string, string[]>();
+    for (const an of artifactNodes) {
+      const nids = a2n.get(an.artifact_id) || [];
+      nids.push(an.node_id);
+      a2n.set(an.artifact_id, nids);
+      const aids = n2a.get(an.node_id) || [];
+      aids.push(an.artifact_id);
+      n2a.set(an.node_id, aids);
+    }
+    const byId = new Map(artifacts.map((a) => [a.id, a]));
+    const rootArts = artifacts.filter((a) => !a2n.has(a.id));
+    return {
+      approvedNodes: approved, pendingNodes: pending, rootNodes: roots,
+      childNodesMap: childMap, artifactToNodes: a2n, nodeToArtifacts: n2a,
+      artifactsById: byId, rootArtifacts: rootArts, hasNodes: approved.length > 0,
+    };
+  }, [nodes, artifactNodes, artifacts]);
 
   useEffect(() => {
     if (user) return;
@@ -927,6 +908,7 @@ export default function StemPage() {
                   <ArtifactCard
                     key={artifact.id}
                     artifact={artifact}
+                    stemId={stem.id}
                     stemUserId={stem.user_id}
                     currentUserId={user?.id}
                     stemUsername={stem.username}
@@ -1235,29 +1217,48 @@ function AddArtifactForm({
     { key: "audio", label: "Audio", emoji: "🎧", disabled: true },
   ];
 
+  const tabBar = (
+    <div style={styles.tabRow}>
+      {TABS.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          disabled={t.disabled}
+          onClick={() => !t.disabled && setTab(t.key)}
+          style={{
+            ...styles.tabBtn,
+            borderBottomColor: tab === t.key ? "var(--forest)" : "transparent",
+            color: t.disabled ? "var(--ink-light)" : tab === t.key ? "var(--forest)" : "var(--ink-mid)",
+            opacity: t.disabled ? 0.5 : 1,
+            cursor: t.disabled ? "not-allowed" : "pointer",
+          }}
+        >
+          {t.emoji} {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const feedbackMessages = (
+    <>
+      {addFetcher.data?.pending && (
+        <p style={{ fontSize: 13, color: "var(--forest)", fontFamily: "'DM Mono', monospace" }}>
+          Submitted — waiting for approval.
+        </p>
+      )}
+      {addFetcher.data?.error && (
+        <p style={{ fontSize: 13, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>
+          {addFetcher.data.error}
+        </p>
+      )}
+    </>
+  );
+
   if (tab === "note") {
     return (
       <addFetcher.Form method="post" style={styles.addArtifactForm}>
         <input type="hidden" name="intent" value="add_note" />
-        <div style={styles.tabRow}>
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              disabled={t.disabled}
-              onClick={() => !t.disabled && setTab(t.key)}
-              style={{
-                ...styles.tabBtn,
-                borderBottomColor: tab === t.key ? "var(--forest)" : "transparent",
-                color: t.disabled ? "var(--ink-light)" : tab === t.key ? "var(--forest)" : "var(--ink-mid)",
-                opacity: t.disabled ? 0.5 : 1,
-                cursor: t.disabled ? "not-allowed" : "pointer",
-              }}
-            >
-              {t.emoji} {t.label}
-            </button>
-          ))}
-        </div>
+        {tabBar}
         <input
           type="text"
           name="title"
@@ -1281,16 +1282,7 @@ function AddArtifactForm({
         >
           {submitting ? "Adding…" : "Add note"}
         </button>
-        {addFetcher.data?.pending && (
-          <p style={{ fontSize: 13, color: "var(--forest)", fontFamily: "'DM Mono', monospace" }}>
-            Submitted — waiting for approval.
-          </p>
-        )}
-        {addFetcher.data?.error && (
-          <p style={{ fontSize: 13, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>
-            {addFetcher.data.error}
-          </p>
-        )}
+        {feedbackMessages}
       </addFetcher.Form>
     );
   }
@@ -1298,25 +1290,7 @@ function AddArtifactForm({
   if (tab === "image" || tab === "file" || tab === "audio") {
     return (
       <div style={styles.addArtifactForm}>
-        <div style={styles.tabRow}>
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              disabled={t.disabled}
-              onClick={() => !t.disabled && setTab(t.key)}
-              style={{
-                ...styles.tabBtn,
-                borderBottomColor: tab === t.key ? "var(--forest)" : "transparent",
-                color: t.disabled ? "var(--ink-light)" : tab === t.key ? "var(--forest)" : "var(--ink-mid)",
-                opacity: t.disabled ? 0.5 : 1,
-                cursor: t.disabled ? "not-allowed" : "pointer",
-              }}
-            >
-              {t.emoji} {t.label}
-            </button>
-          ))}
-        </div>
+        {tabBar}
         <div style={styles.comingSoon}>
           <p style={styles.comingSoonText}>
             {tab === "image" ? "🖼️" : tab === "file" ? "📎" : "🎧"}
@@ -1335,25 +1309,7 @@ function AddArtifactForm({
   return (
     <addFetcher.Form method="post" style={styles.addArtifactForm}>
       <input type="hidden" name="intent" value="add_artifact" />
-      <div style={styles.tabRow}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            disabled={t.disabled}
-            onClick={() => !t.disabled && setTab(t.key)}
-            style={{
-              ...styles.tabBtn,
-              borderBottomColor: tab === t.key ? "var(--forest)" : "transparent",
-              color: t.disabled ? "var(--ink-light)" : tab === t.key ? "var(--forest)" : "var(--ink-mid)",
-              opacity: t.disabled ? 0.5 : 1,
-              cursor: t.disabled ? "not-allowed" : "pointer",
-            }}
-          >
-            {t.emoji} {t.label}
-          </button>
-        ))}
-      </div>
+      {tabBar}
       {/* Pass prefetched OG data to avoid re-fetching in the action */}
       {og && !("error" in og) && (
         <>
@@ -1455,16 +1411,7 @@ function AddArtifactForm({
         </>
       )}
 
-      {addFetcher.data?.pending && (
-        <p style={{ fontSize: 13, color: "var(--forest)", fontFamily: "'DM Mono', monospace" }}>
-          Submitted — waiting for approval.
-        </p>
-      )}
-      {addFetcher.data?.error && (
-        <p style={{ fontSize: 13, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>
-          {addFetcher.data.error}
-        </p>
-      )}
+      {feedbackMessages}
     </addFetcher.Form>
   );
 }
@@ -1502,11 +1449,16 @@ function PendingArtifactRow({ artifact, stemId }: { artifact: Artifact; stemId: 
   return (
     <div style={styles.pendingRow}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <a href={artifact.url} target="_blank" rel="noopener noreferrer" style={styles.pendingTitle}>
-          {artifact.title || artifact.url}
-        </a>
+        {artifact.url ? (
+          <a href={artifact.url} target="_blank" rel="noopener noreferrer" style={styles.pendingTitle}>
+            {artifact.title || artifact.url}
+          </a>
+        ) : (
+          <p style={styles.pendingTitle}>{artifact.title || "Note"}</p>
+        )}
         {artifact.note && <p style={styles.pendingNote}>{artifact.note}</p>}
-        <p style={styles.pendingMeta}>by @{artifact.contributor_username} · {getDomain(artifact.url)}</p>
+        {artifact.body && <p style={styles.pendingNote}>{artifact.body.slice(0, 200)}</p>}
+        <p style={styles.pendingMeta}>by @{artifact.contributor_username}{artifact.url ? ` · ${getDomain(artifact.url)}` : " · note"}</p>
       </div>
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
         <fetcher.Form method="post">
@@ -2021,6 +1973,7 @@ function NodeMapView({
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [positions, setPositions] = useState<{ x: number; y: number }[]>([]);
+  const [edges, setEdges] = useState<[number, number][]>([]);
 
   useEffect(() => {
     if (nodes.length === 0) return;
@@ -2034,21 +1987,23 @@ function NodeMapView({
     const nodeIndex = new Map(nodes.map((n, i) => [n.id, i]));
 
     // Build edges
-    const edges: [number, number][] = [];
+    const simEdges: [number, number][] = [];
     for (const n of nodes) {
       const children = childNodesMap.get(n.id) || [];
       const pi = nodeIndex.get(n.id)!;
       for (const c of children) {
         const ci = nodeIndex.get(c.id);
-        if (ci !== undefined) edges.push([pi, ci]);
+        if (ci !== undefined) simEdges.push([pi, ci]);
       }
     }
 
     let frame = 0;
+    let rafId = 0;
     const maxFrames = 100;
     const tick = () => {
       if (frame >= maxFrames) {
         setPositions([...pos]);
+        setEdges(simEdges);
         return;
       }
       // Repulsion
@@ -2065,7 +2020,7 @@ function NodeMapView({
         }
       }
       // Attraction (edges)
-      for (const [a, b] of edges) {
+      for (const [a, b] of simEdges) {
         const dx = pos[b].x - pos[a].x;
         const dy = pos[b].y - pos[a].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2088,24 +2043,14 @@ function NodeMapView({
         pos[i].y = Math.max(40, Math.min(H - 40, pos[i].y));
       }
       frame++;
-      if (frame < maxFrames) requestAnimationFrame(tick);
-      else setPositions([...pos]);
+      if (frame < maxFrames) rafId = requestAnimationFrame(tick);
+      else { setPositions([...pos]); setEdges(simEdges); }
     };
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [nodes.length]);
 
   if (positions.length === 0) return null;
-
-  const nodeIndex = new Map(nodes.map((n, i) => [n.id, i]));
-  const edges: [number, number][] = [];
-  for (const n of nodes) {
-    const children = childNodesMap.get(n.id) || [];
-    const pi = nodeIndex.get(n.id)!;
-    for (const c of children) {
-      const ci = nodeIndex.get(c.id);
-      if (ci !== undefined) edges.push([pi, ci]);
-    }
-  }
 
   return (
     <div style={{ marginBottom: 24, borderRadius: 12, overflow: "hidden", border: "1px solid var(--paper-dark)", background: "var(--surface)" }}>
@@ -2155,12 +2100,14 @@ function NodeMapView({
 
 function ArtifactCard({
   artifact,
+  stemId,
   stemUserId,
   currentUserId,
   stemUsername,
   nodeNames,
 }: {
   artifact: Artifact;
+  stemId: string;
   stemUserId: string;
   currentUserId: string | undefined;
   stemUsername: string;
@@ -2257,7 +2204,7 @@ function ArtifactCard({
           target="_blank"
           rel="noopener noreferrer"
           style={styles.artifactTitle}
-          onClick={() => track("open_link", { stem_id: artifact.stem_id, artifact_id: artifact.id })}
+          onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
         >
           {artifact.title || artifact.url}
         </a>

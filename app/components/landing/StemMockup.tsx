@@ -241,7 +241,7 @@ export function StemMockup({
       )}
       <div style={s.rule} />
       <div style={s.artifactList}>
-        {resolvedFinds.map((f, i) => (
+        {resolvedArtifacts.map((f, i) => (
           <div
             key={f.title}
             className={hoverable ? "landing-artifact-row" : undefined}
