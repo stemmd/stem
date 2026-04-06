@@ -83,11 +83,11 @@ export default function AdminDashboard() {
     <div>
       <h1 style={styles.heading}>Overview</h1>
 
-      <div style={styles.grid}>
+      <div data-admin-grid style={styles.grid}>
         {STAT_CARDS.map((card) => (
-          <div key={card.key} style={styles.card}>
+          <div key={card.key} data-admin-card style={styles.card}>
             <span style={styles.cardLabel}>{card.label}</span>
-            <span style={styles.cardNumber}>{stats[card.key]}</span>
+            <span data-card-number style={styles.cardNumber}>{stats[card.key]}</span>
             {card.subtitle && (
               <span style={styles.cardSubtitle}>{card.subtitle}</span>
             )}
@@ -98,11 +98,11 @@ export default function AdminDashboard() {
       <h2 style={styles.sectionHeading}>Recent signups</h2>
 
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <table data-admin-table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th}>Username</th>
-              <th style={styles.th}>Display Name</th>
+              <th data-hide-mobile style={styles.th}>Display Name</th>
               <th style={styles.th}>Joined</th>
             </tr>
           </thead>
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
             {recentUsers.map((user) => (
               <tr key={user.username}>
                 <td style={styles.td}>{user.username}</td>
-                <td style={styles.td}>{user.display_name ?? "—"}</td>
+                <td data-hide-mobile style={styles.td}>{user.display_name ?? "—"}</td>
                 <td style={styles.td}>
                   {new Date(user.created_at).toLocaleDateString("en-US", {
                     month: "short",

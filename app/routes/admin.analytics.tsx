@@ -79,12 +79,12 @@ export default function AdminAnalytics() {
       {/* Daily activity */}
       <section style={{ marginTop: 32 }}>
         <h3 style={styles.sectionHeading}>Daily activity</h3>
-        <table style={styles.table}>
+        <table data-admin-table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th}>Day</th>
               <th style={styles.th}>Events</th>
-              <th style={styles.th}>Devices</th>
+              <th data-hide-mobile style={styles.th}>Devices</th>
             </tr>
           </thead>
           <tbody>
@@ -92,7 +92,7 @@ export default function AdminAnalytics() {
               <tr key={d.day}>
                 <td style={styles.td}>{d.day}</td>
                 <td style={styles.td}>{d.count}</td>
-                <td style={styles.td}>{d.devices}</td>
+                <td data-hide-mobile style={styles.td}>{d.devices}</td>
               </tr>
             ))}
           </tbody>
@@ -102,7 +102,7 @@ export default function AdminAnalytics() {
       {/* Event breakdown */}
       <section style={{ marginTop: 32 }}>
         <h3 style={styles.sectionHeading}>Event breakdown</h3>
-        <table style={styles.table}>
+        <table data-admin-table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th}>Event</th>

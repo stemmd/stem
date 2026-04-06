@@ -215,6 +215,7 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [checkState, setCheckState] = useState<CheckState>("idle");
+  const [invalidReason, setInvalidReason] = useState("");
   const [inlineError, setInlineError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -260,7 +261,7 @@ export default function Home() {
 
   const checkUsername = async (val: string) => {
     const check = validateUsername(val);
-    if (!check.valid) { setCheckState("invalid"); return; }
+    if (!check.valid) { setInvalidReason(check.reason || ""); setCheckState("invalid"); return; }
     setCheckState("checking");
     try {
       const res = await fetch(`${API_BASE}/check?username=${encodeURIComponent(val)}`);
@@ -325,7 +326,7 @@ export default function Home() {
     checking: "checking",
     available: `stem.md/${username} is available`,
     taken: "already claimed",
-    invalid: "letters, numbers, and hyphens only",
+    invalid: invalidReason || "letters, numbers, and hyphens only",
   }[checkState];
 
   const statusColor = {
@@ -333,7 +334,7 @@ export default function Home() {
     checking: "var(--ink-light)",
     available: "var(--forest)",
     taken: "var(--taken)",
-    invalid: "var(--ink-light)",
+    invalid: "var(--taken)",
   }[checkState];
 
   return (

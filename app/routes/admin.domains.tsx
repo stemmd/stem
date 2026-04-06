@@ -131,16 +131,16 @@ export default function AdminDomains() {
       {/* Search */}
       <Form method="get" style={styles.searchForm}>
         {cat && <input type="hidden" name="cat" value={cat} />}
-        <input type="text" name="q" defaultValue={q} placeholder="Search domains..." style={styles.searchInput} />
+        <input type="text" name="q" defaultValue={q} placeholder="Search domains..." data-admin-search style={styles.searchInput} />
       </Form>
 
       {/* Table */}
-      <table style={styles.table}>
+      <table data-admin-table style={styles.table}>
         <thead>
           <tr>
             <th style={styles.th}>Domain</th>
             <th style={styles.th}>Category</th>
-            <th style={styles.th}>Added</th>
+            <th data-hide-mobile style={styles.th}>Added</th>
             <th style={{ ...styles.th, width: 60 }}></th>
           </tr>
         </thead>
@@ -153,7 +153,7 @@ export default function AdminDomains() {
               <td style={styles.td}>
                 <span style={styles.catBadge}>{d.category}</span>
               </td>
-              <td style={styles.td}>
+              <td data-hide-mobile style={styles.td}>
                 <span style={styles.dateText}>
                   {new Date(d.added_at + "Z").toLocaleDateString()}
                 </span>

@@ -41,6 +41,7 @@ export default function Waitlist() {
   const { email, name, waitlistStatus, reservedUsername } = useLoaderData<typeof loader>();
   const [username, setUsername] = useState("");
   const [checkState, setCheckState] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [invalidReason, setInvalidReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(waitlistStatus !== "not_on_list");
   const [displayUsername, setDisplayUsername] = useState(reservedUsername || "");
@@ -50,7 +51,7 @@ export default function Waitlist() {
 
   const checkUsername = async (val: string) => {
     const check = validateUsername(val);
-    if (!check.valid) { setCheckState("invalid"); return; }
+    if (!check.valid) { setInvalidReason(check.reason || ""); setCheckState("invalid"); return; }
     setCheckState("checking");
     try {
       const res = await fetch(`${API_BASE}/check?username=${encodeURIComponent(val)}`);
@@ -112,7 +113,7 @@ export default function Waitlist() {
     checking: "var(--ink-light)",
     available: "var(--forest)",
     taken: "var(--taken)",
-    invalid: "var(--ink-light)",
+    invalid: "var(--taken)",
   }[checkState];
 
   const statusMsg = {
@@ -120,7 +121,7 @@ export default function Waitlist() {
     checking: "checking...",
     available: `stem.md/${username} is yours`,
     taken: "already claimed",
-    invalid: "letters, numbers, and hyphens only",
+    invalid: invalidReason || "letters, numbers, and hyphens only",
   }[checkState];
 
   // Already on waitlist or just submitted

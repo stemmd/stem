@@ -39,10 +39,10 @@ export function validateUsername(name: string): { valid: boolean; reason?: strin
     return { valid: false, reason: "3-20 characters: lowercase letters, numbers, hyphens. Must start and end with a letter or number." };
   }
   if (RESERVED_USERNAMES.has(name)) {
-    return { valid: false, reason: "That username is reserved." };
+    return { valid: false, reason: "this username is unavailable" };
   }
   if (BLOCKED_PATTERNS.some((p) => p.test(name))) {
-    return { valid: false, reason: "That username is not allowed." };
+    return { valid: false, reason: "this username is unavailable" };
   }
   return { valid: true };
 }

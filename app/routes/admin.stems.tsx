@@ -123,20 +123,21 @@ export default function AdminStems() {
         placeholder="Search stems by title..."
         value={search}
         onChange={(e) => handleSearch(e.target.value)}
+        data-admin-search
         style={styles.searchInput}
       />
 
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <table data-admin-table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th}></th>
               <th style={styles.th}>Title</th>
               <th style={styles.th}>Owner</th>
-              <th style={{ ...styles.th, textAlign: "right" }}>Finds</th>
-              <th style={styles.th}>Visibility</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Created</th>
+              <th data-hide-mobile style={{ ...styles.th, textAlign: "right" }}>Finds</th>
+              <th data-hide-mobile style={styles.th}>Visibility</th>
+              <th data-hide-mobile style={styles.th}>Status</th>
+              <th data-hide-mobile style={styles.th}>Created</th>
               <th style={styles.th}></th>
             </tr>
           </thead>
@@ -159,16 +160,16 @@ export default function AdminStems() {
                     @{stem.username}
                   </Link>
                 </td>
-                <td style={{ ...styles.td, textAlign: "right", ...styles.mono }}>
+                <td data-hide-mobile style={{ ...styles.td, textAlign: "right", ...styles.mono }}>
                   {stem.find_count}
                 </td>
-                <td style={styles.td}>
+                <td data-hide-mobile style={styles.td}>
                   <VisibilityBadge visibility={stem.visibility} />
                 </td>
-                <td style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
+                <td data-hide-mobile style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
                   {stem.status}
                 </td>
-                <td style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
+                <td data-hide-mobile style={{ ...styles.td, ...styles.mono, fontSize: 12 }}>
                   <DateEditor stemId={stem.id} currentDate={stem.created_at} />
                 </td>
                 <td style={styles.td}>
