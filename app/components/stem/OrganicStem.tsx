@@ -217,18 +217,7 @@ export function OrganicStem({
                   gridColumn: "2",
                   gridRow: `1 / ${stemItems.length + 2}`,
                 }}
-              >
-                {stemItems.map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      ...organicStyles.junctionDot,
-                      top: `${((i + 0.5) / Math.max(stemItems.length, 1)) * 100}%`,
-                    }}
-                  />
-                ))}
-                <div style={organicStyles.growthTip} />
-              </div>
+              />
             )}
 
             {stemItems.map((item, index) => (
@@ -318,19 +307,12 @@ export function OrganicStem({
 
             {/* Mini organic trunk for this node's artifacts */}
             <div style={{ ...organicStyles.grid, gridTemplateColumns: "1fr 4px 1fr", maxWidth: 700 }}>
-              {focusedNodeArtifacts.length > 0 && (
+              {(focusedNodeArtifacts.length > 0 || focusedNodeChildren.length > 0) && (
                 <div style={{
                   ...organicStyles.trunk,
                   gridColumn: "2",
                   gridRow: `1 / ${focusedNodeArtifacts.length + focusedNodeChildren.length + 2}`,
-                }}>
-                  {[...focusedNodeArtifacts, ...focusedNodeChildren].map((_, i) => (
-                    <div key={i} style={{
-                      ...organicStyles.junctionDot,
-                      top: `${((i + 0.5) / Math.max(focusedNodeArtifacts.length + focusedNodeChildren.length, 1)) * 100}%`,
-                    }} />
-                  ))}
-                </div>
+                }} />
               )}
 
               {focusedNodeArtifacts.map((artifact, i) => (
@@ -343,7 +325,10 @@ export function OrganicStem({
                     flexDirection: i % 2 === 0 ? "row" : "row-reverse",
                   }}
                 >
-                  <div style={organicStyles.connector} />
+                  <div style={{ ...organicStyles.connectorWrap, flexDirection: i % 2 === 0 ? "row" : "row-reverse" }}>
+                    <div style={organicStyles.junctionDot} />
+                    <div style={organicStyles.connector} />
+                  </div>
                   <div style={organicStyles.cardWrapper}>
                     <ArtifactCard
                       artifact={artifact}
@@ -378,7 +363,10 @@ export function OrganicStem({
                       flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row",
                     }}
                   >
-                    <div style={organicStyles.connector} />
+                    <div style={{ ...organicStyles.connectorWrap, flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row" }}>
+                      <div style={organicStyles.junctionDot} />
+                      <div style={organicStyles.connector} />
+                    </div>
                     <NodeCard
                       node={child}
                       artifactCount={childArtifactCount}
@@ -537,11 +525,11 @@ function StemBranchItem({
         borderTop: isDragOver ? "2px solid var(--forest)" : "2px solid transparent",
       }}
     >
-      {/* Connector */}
-      <div style={{
-        ...organicStyles.connector,
-        borderRadius: side === "left" ? "8px 0 0 8px" : "0 8px 8px 0",
-      }} />
+      {/* Connector with junction dot */}
+      <div style={{ ...organicStyles.connectorWrap, flexDirection: side === "left" && !isMobile ? "row-reverse" : "row" }}>
+        <div style={organicStyles.junctionDot} />
+        <div style={organicStyles.connector} />
+      </div>
       {content}
     </div>
   );
@@ -597,15 +585,20 @@ const organicStyles: Record<string, React.CSSProperties> = {
     zIndex: 3,
   },
 
+  connectorWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 0,
+    flexShrink: 0,
+    zIndex: 4,
+  },
+
   junctionDot: {
-    position: "absolute" as const,
-    left: "50%",
-    transform: "translate(-50%, -50%)",
     width: 10,
     height: 10,
     borderRadius: "50%",
     background: "var(--forest)",
-    zIndex: 4,
+    flexShrink: 0,
   },
 
   growthTip: {
