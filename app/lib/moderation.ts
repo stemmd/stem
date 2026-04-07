@@ -101,6 +101,60 @@ export async function checkBlockedDomain(
   return { blocked: false };
 }
 
+// Google Safe Browsing API — checks URLs for malware, phishing, unwanted software
+export async function checkSafeBrowsing(
+  url: string,
+  apiKey: string | undefined
+): Promise<{ unsafe: boolean; reason?: string }> {
+  if (!apiKey) return { unsafe: false }; // Skip if no API key configured
+
+  try {
+    const res = await fetch(
+      `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client: { clientId: "stem-md", clientVersion: "1.0" },
+          threatInfo: {
+            threatTypes: [
+              "MALWARE",
+              "SOCIAL_ENGINEERING",
+              "UNWANTED_SOFTWARE",
+              "POTENTIALLY_HARMFUL_APPLICATION",
+            ],
+            platformTypes: ["ANY_PLATFORM"],
+            threatEntryTypes: ["URL"],
+            threatEntries: [{ url }],
+          },
+        }),
+        signal: AbortSignal.timeout(3000),
+      }
+    );
+
+    if (!res.ok) return { unsafe: false }; // Don't block on API errors
+
+    const data = await res.json() as { matches?: { threatType: string }[] };
+    if (data.matches && data.matches.length > 0) {
+      const threat = data.matches[0].threatType;
+      const reasons: Record<string, string> = {
+        MALWARE: "This URL has been flagged as malware",
+        SOCIAL_ENGINEERING: "This URL has been flagged as a phishing site",
+        UNWANTED_SOFTWARE: "This URL has been flagged for distributing unwanted software",
+        POTENTIALLY_HARMFUL_APPLICATION: "This URL has been flagged as potentially harmful",
+      };
+      return {
+        unsafe: true,
+        reason: reasons[threat] || "This URL has been flagged as unsafe",
+      };
+    }
+
+    return { unsafe: false };
+  } catch {
+    return { unsafe: false }; // Don't block on network errors
+  }
+}
+
 // Follow redirects and check for suspicious chains
 export async function checkRedirects(
   url: string

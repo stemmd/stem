@@ -11,7 +11,7 @@ import { fetchOG, type OGData } from "~/lib/og.server";
 import { getDomain, isHttpUrl } from "~/lib/utils";
 import { mutualCheckSql } from "~/lib/stems.server";
 import { CATEGORIES } from "~/components/StemPickers";
-import { checkContent, checkBlockedDomain, checkRedirects } from "~/lib/moderation";
+import { checkContent, checkBlockedDomain, checkRedirects, checkSafeBrowsing } from "~/lib/moderation";
 import { Nav } from "~/components/Nav";
 import { Footer } from "~/components/Footer";
 import { nanoid } from "nanoid";
@@ -338,6 +338,10 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
     const redirectCheck = await checkRedirects(url);
     if (redirectCheck.suspicious) return json({ error: redirectCheck.reason }, { status: 400 });
+
+    const safeBrowsingKey = context.cloudflare.env.GOOGLE_SAFE_BROWSING_KEY;
+    const safeCheck = await checkSafeBrowsing(url, safeBrowsingKey);
+    if (safeCheck.unsafe) return json({ error: safeCheck.reason || "This URL has been flagged as unsafe." }, { status: 400 });
 
     const note = (form.get("note") as string | null)?.trim() || null;
     if (note && note.length > 500) return json({ error: "Note is too long (max 500 characters)." }, { status: 400 });

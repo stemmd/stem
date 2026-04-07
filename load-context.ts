@@ -13,6 +13,7 @@ interface Env {
   DEFAULT_FOLLOW_USERNAME?: string;
   TURNSTILE_SECRET?: string;
   YOUTUBE_API_KEY?: string;
+  GOOGLE_SAFE_BROWSING_KEY?: string;
 }
 
 type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
