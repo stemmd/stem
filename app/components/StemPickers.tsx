@@ -1,5 +1,7 @@
 // Shared pickers for stem visibility, contribution mode, and category tagging.
 // Used in stem creation (/new), stem settings, and user settings.
+import { useState } from "react";
+import { useFetcher } from "@remix-run/react";
 
 export const CATEGORIES = [
   { id: "cat_architecture", name: "Architecture", emoji: "🏗️" },
@@ -27,6 +29,18 @@ export const CATEGORIES = [
   { id: "cat_sport",        name: "Sport",        emoji: "⚽" },
   { id: "cat_technology",   name: "Technology",   emoji: "💻" },
   { id: "cat_urbanism",     name: "Urbanism",     emoji: "🏙️" },
+  { id: "cat_archaeology",  name: "Archaeology",  emoji: "🏺" },
+  { id: "cat_cs",           name: "Computer Science", emoji: "🖥️" },
+  { id: "cat_culture",      name: "Culture",      emoji: "🎭" },
+  { id: "cat_education",    name: "Education",    emoji: "🎓" },
+  { id: "cat_engineering",  name: "Engineering",  emoji: "⚙️" },
+  { id: "cat_environment",  name: "Environment",  emoji: "🌍" },
+  { id: "cat_fashion",      name: "Fashion",      emoji: "👗" },
+  { id: "cat_finance",      name: "Finance",      emoji: "💰" },
+  { id: "cat_gaming",       name: "Gaming",       emoji: "🎮" },
+  { id: "cat_law",          name: "Law",           emoji: "⚖️" },
+  { id: "cat_medicine",     name: "Medicine",      emoji: "🩺" },
+  { id: "cat_travel",       name: "Travel",        emoji: "✈️" },
 ] as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -57,6 +71,18 @@ export const CATEGORY_COLORS: Record<string, { light: string; dark: string }> = 
   cat_sport:        { light: "#f2ece4", dark: "#28251e" },
   cat_technology:   { light: "#e8eef2", dark: "#202428" },
   cat_urbanism:     { light: "#eeeae4", dark: "#26221e" },
+  cat_archaeology:  { light: "#f2ebe0", dark: "#28241a" },
+  cat_cs:           { light: "#e4ecf5", dark: "#1e2430" },
+  cat_culture:      { light: "#f0e8ed", dark: "#282024" },
+  cat_education:    { light: "#eae8f2", dark: "#201e28" },
+  cat_engineering:  { light: "#eaeef0", dark: "#20262a" },
+  cat_environment:  { light: "#e4f2ea", dark: "#1e2a20" },
+  cat_fashion:      { light: "#f5e8f0", dark: "#2a2028" },
+  cat_finance:      { light: "#f0ede4", dark: "#28251e" },
+  cat_gaming:       { light: "#e8e4f5", dark: "#1e1e30" },
+  cat_law:          { light: "#eceae4", dark: "#24221e" },
+  cat_medicine:     { light: "#e4f0ee", dark: "#1e2826" },
+  cat_travel:       { light: "#e8f0f5", dark: "#1e2830" },
 };
 
 export function getCategoryTint(categoryId: string | null | undefined): string {
@@ -121,6 +147,75 @@ export function CategoryPicker({
           );
         })}
       </div>
+      <SuggestCategory />
+    </div>
+  );
+}
+
+function SuggestCategory() {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const fetcher = useFetcher<{ success?: boolean; error?: string }>();
+  const submitted = fetcher.state === "idle" && fetcher.data?.success;
+
+  if (submitted) {
+    return (
+      <p style={catStyles.suggestSuccess}>
+        Thanks! Your suggestion has been submitted for review.
+      </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={catStyles.suggestToggle}
+      >
+        Don't see your category? Suggest one
+      </button>
+    );
+  }
+
+  return (
+    <div style={catStyles.suggestForm}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Category name"
+          maxLength={40}
+          style={catStyles.suggestInput}
+        />
+        <button
+          type="button"
+          disabled={!name.trim() || fetcher.state !== "idle"}
+          onClick={() => {
+            fetcher.submit(
+              { name: name.trim() },
+              { method: "post", action: "/api/suggest-category" }
+            );
+          }}
+          style={{
+            ...catStyles.suggestBtn,
+            opacity: !name.trim() || fetcher.state !== "idle" ? 0.5 : 1,
+          }}
+        >
+          {fetcher.state !== "idle" ? "..." : "Suggest"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setName(""); }}
+          style={catStyles.suggestCancel}
+        >
+          Cancel
+        </button>
+      </div>
+      {fetcher.data?.error && (
+        <p style={catStyles.suggestError}>{fetcher.data.error}</p>
+      )}
     </div>
   );
 }
@@ -140,6 +235,66 @@ const catStyles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Sans', sans-serif",
     transition: "background 0.12s, color 0.12s",
     lineHeight: 1.4,
+  },
+  suggestToggle: {
+    background: "none",
+    border: "none",
+    padding: "8px 0 0",
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
+    color: "var(--ink-light)",
+    cursor: "pointer",
+    textDecoration: "underline",
+    textDecorationColor: "var(--paper-dark)",
+  },
+  suggestForm: {
+    marginTop: 10,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+  },
+  suggestInput: {
+    flex: 1,
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: "1px solid var(--paper-dark)",
+    background: "var(--paper-mid)",
+    fontSize: 13,
+    fontFamily: "'DM Sans', sans-serif",
+    color: "var(--ink)",
+    outline: "none",
+  },
+  suggestBtn: {
+    padding: "6px 14px",
+    background: "var(--forest)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    fontSize: 12,
+    fontFamily: "'DM Sans', sans-serif",
+    fontWeight: 500,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+  },
+  suggestCancel: {
+    background: "none",
+    border: "none",
+    fontSize: 12,
+    fontFamily: "'DM Sans', sans-serif",
+    color: "var(--ink-light)",
+    cursor: "pointer",
+    padding: 0,
+  },
+  suggestSuccess: {
+    marginTop: 8,
+    fontSize: 12,
+    fontFamily: "'DM Mono', monospace",
+    color: "var(--forest)",
+  },
+  suggestError: {
+    fontSize: 12,
+    fontFamily: "'DM Mono', monospace",
+    color: "var(--taken)",
   },
 };
 

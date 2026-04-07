@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: "/admin/users", label: "Users" },
   { to: "/admin/stems", label: "Stems" },
   { to: "/admin/content", label: "Content" },
+  { to: "/admin/categories", label: "Categories" },
   { to: "/admin/domains", label: "Blocked Domains" },
   { to: "/admin/analytics", label: "Analytics" },
 ];

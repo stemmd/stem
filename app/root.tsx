@@ -74,6 +74,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             --cat-politics:#e8eee8; --cat-psychology:#f0e8f0; --cat-science:#e4f0f2;
             --cat-space:#e4e8f5; --cat-sport:#f2ece4; --cat-technology:#e8eef2;
             --cat-urbanism:#eeeae4;
+            --cat-archaeology:#f2ebe0; --cat-cs:#e4ecf5; --cat-culture:#f0e8ed;
+            --cat-education:#eae8f2; --cat-engineering:#eaeef0; --cat-environment:#e4f2ea;
+            --cat-fashion:#f5e8f0; --cat-finance:#f0ede4; --cat-gaming:#e8e4f5;
+            --cat-law:#eceae4; --cat-medicine:#e4f0ee; --cat-travel:#e8f0f5;
           }
 
           @media (prefers-color-scheme: dark) {
@@ -97,6 +101,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               --cat-politics:#202820; --cat-psychology:#282028; --cat-science:#1e2828;
               --cat-space:#1e2030; --cat-sport:#28251e; --cat-technology:#202428;
               --cat-urbanism:#26221e;
+              --cat-archaeology:#28241a; --cat-cs:#1e2430; --cat-culture:#282024;
+              --cat-education:#201e28; --cat-engineering:#20262a; --cat-environment:#1e2a20;
+              --cat-fashion:#2a2028; --cat-finance:#28251e; --cat-gaming:#1e1e30;
+              --cat-law:#24221e; --cat-medicine:#1e2826; --cat-travel:#1e2830;
             }
           }
           [data-theme="dark"] {
