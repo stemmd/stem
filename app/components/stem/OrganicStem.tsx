@@ -47,6 +47,7 @@ export function OrganicStem({
   isOwner: boolean;
 }) {
   const [focusedNodeStack, setFocusedNodeStack] = useState<string[]>([]);
+  const [focusedSide, setFocusedSide] = useState<"left" | "right">("right");
   const [popoverPosition, setPopoverPosition] = useState<{ y: number; index: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery("(max-width: 680px)");
@@ -99,9 +100,9 @@ export function OrganicStem({
   );
 
   // Focus/zoom into a node
-  const focusNode = useCallback((nodeId: string) => {
+  const focusNode = useCallback((nodeId: string, side?: "left" | "right") => {
     setFocusedNodeStack((prev) => [...prev, nodeId]);
-    // Update URL hash for shareability
+    if (side) setFocusedSide(side);
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `#node-${nodeId}`);
     }
@@ -164,199 +165,252 @@ export function OrganicStem({
     );
   }
 
-  if (focusedNode) {
-    return (
-      <div style={organicStyles.focusContainer}>
-        {/* Breadcrumb */}
-        <div style={organicStyles.breadcrumb}>
-          <button
-            onClick={() => setFocusedNodeStack([])}
-            style={organicStyles.breadcrumbLink}
-          >
-            {"\u2190"} Stem
-          </button>
-          {breadcrumbs.map((crumb, i) => (
-            <span key={crumb.id} style={organicStyles.breadcrumbItem}>
-              <span style={organicStyles.breadcrumbSep}>/</span>
-              {i < breadcrumbs.length - 1 ? (
-                <button
-                  onClick={() => setFocusedNodeStack((prev) => prev.slice(0, i + 1))}
-                  style={organicStyles.breadcrumbLink}
-                >
-                  {crumb.emoji && `${crumb.emoji} `}{crumb.title}
-                </button>
-              ) : (
-                <span style={organicStyles.breadcrumbCurrent}>
-                  {crumb.emoji && `${crumb.emoji} `}{crumb.title}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
+  // Determine grid columns based on focus state
+  const isFocused = !!focusedNode;
+  const stemShiftsLeft = isFocused && focusedSide === "right";
+  const gridColumns = isMobile
+    ? "4px 1fr"
+    : isFocused
+      ? stemShiftsLeft
+        ? "0.2fr 4px 1fr"   // stem shrinks left, node expands right
+        : "1fr 4px 0.2fr"   // node expands left, stem shrinks right
+      : "1fr 4px 1fr";
 
-        {/* Node header */}
-        <div style={organicStyles.focusedHeader}>
-          {focusedNode.emoji && (
-            <span style={{ fontSize: 32, marginBottom: 8, display: "block" }}>{focusedNode.emoji}</span>
-          )}
-          <h2 style={organicStyles.focusedTitle}>{focusedNode.title}</h2>
-          {focusedNode.description && (
-            <p style={organicStyles.focusedDesc}>{focusedNode.description}</p>
-          )}
-          <span style={organicStyles.focusedCount}>
-            {focusedNodeArtifacts.length} {focusedNodeArtifacts.length === 1 ? "artifact" : "artifacts"}
-          </span>
-        </div>
-
-        {/* Artifacts in this node */}
-        <div style={organicStyles.focusedContent}>
-          {focusedNodeArtifacts.map((artifact) => (
-            <ArtifactCard
-              key={artifact.id}
-              artifact={artifact}
-              stemId={stemId}
-              stemUserId={stemUserId}
-              currentUserId={currentUserId}
-              stemUsername={stemUsername}
-              nodeNames={
-                (artifactToNodes.get(artifact.id)?.length ?? 0) > 1
-                  ? artifactToNodes
-                      .get(artifact.id)!
-                      .filter((nid) => nid !== focusedNodeId)
-                      .map((nid) => nodesById.get(nid)?.title ?? "")
-                      .filter(Boolean)
-                  : undefined
-              }
-            />
-          ))}
-
-          {focusedNodeArtifacts.length === 0 && (
-            <p style={{ ...styles.empty, padding: "40px 0" }}>
-              No artifacts in this node yet.
-            </p>
-          )}
-        </div>
-
-        {/* Sub-nodes */}
-        {focusedNodeChildren.length > 0 && (
-          <div style={organicStyles.subNodes}>
-            <span style={organicStyles.subNodesLabel}>Sub-topics</span>
-            <div style={organicStyles.subNodesGrid}>
-              {focusedNodeChildren.map((child) => {
-                const childArtifactCount = (nodeToArtifacts.get(child.id) || []).length;
-                return (
-                  <button
-                    key={child.id}
-                    onClick={() => focusNode(child.id)}
-                    style={organicStyles.subNodeCard}
-                  >
-                    {child.emoji && <span style={{ fontSize: 20 }}>{child.emoji}</span>}
-                    <span style={organicStyles.subNodeTitle}>{child.title}</span>
-                    <span style={organicStyles.subNodeCount}>
-                      {childArtifactCount} {childArtifactCount === 1 ? "artifact" : "artifacts"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Owner: add sub-node */}
-        {isOwner && (
-          <AddNodeForm stemId={stemId} parentId={focusedNodeId} />
-        )}
-      </div>
-    );
-  }
-
-  // ── Main organic stem view ────────────────────────────────────────────────
   return (
     <DragProvider stemId={stemId} items={dragItems} isOwner={isOwner}>
     <div style={organicStyles.wrapper}>
-      <div
-        ref={gridRef}
-        style={{
-          ...organicStyles.grid,
-          gridTemplateColumns: isMobile ? "4px 1fr" : "1fr 4px 1fr",
-        }}
-      >
-        {/* The trunk line — only visible when there are items */}
-        {stemItems.length > 0 && (
+      {/* Main stem + focused node side-by-side layout */}
+      <div style={{ display: "flex", gap: 0, position: "relative", transition: "all 0.3s ease" }}>
+
+        {/* ── The stem column (shrinks when focused) ─────────────────── */}
+        <div
+          style={{
+            flex: isFocused ? "0 0 auto" : "1 1 auto",
+            width: isFocused ? (isMobile ? 0 : 80) : "100%",
+            opacity: isFocused ? 0.35 : 1,
+            filter: isFocused ? "blur(1px)" : "none",
+            transition: "all 0.3s ease",
+            overflow: "hidden",
+            cursor: isFocused ? "pointer" : "default",
+            order: isFocused && stemShiftsLeft ? 0 : isFocused ? 2 : 0,
+          }}
+          onClick={isFocused ? () => {
+            setFocusedNodeStack([]);
+            if (typeof window !== "undefined") {
+              window.history.replaceState(null, "", window.location.pathname);
+            }
+          } : undefined}
+          title={isFocused ? "Click to return to stem" : undefined}
+        >
           <div
+            ref={gridRef}
             style={{
-              ...organicStyles.trunk,
-              gridColumn: isMobile ? "1" : "2",
-              gridRow: `1 / ${stemItems.length + 2}`,
+              ...organicStyles.grid,
+              gridTemplateColumns: isFocused ? "1fr 4px 1fr" : gridColumns,
+              pointerEvents: isFocused ? "none" : "auto",
             }}
-            onClick={isOwner ? (e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const y = e.clientY - rect.top;
-              const rowH = rect.height / Math.max(stemItems.length, 1);
-              const idx = Math.round(y / rowH);
-              handleTrunkClick(y, Math.min(idx, stemItems.length));
-            } : undefined}
           >
-            {stemItems.map((_, i) => (
+            {stemItems.length > 0 && (
               <div
-                key={i}
                 style={{
-                  ...organicStyles.junctionDot,
-                  top: `${((i + 0.5) / Math.max(stemItems.length, 1)) * 100}%`,
+                  ...organicStyles.trunk,
+                  gridColumn: "2",
+                  gridRow: `1 / ${stemItems.length + 2}`,
                 }}
+              >
+                {stemItems.map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      ...organicStyles.junctionDot,
+                      top: `${((i + 0.5) / Math.max(stemItems.length, 1)) * 100}%`,
+                    }}
+                  />
+                ))}
+                <div style={organicStyles.growthTip} />
+              </div>
+            )}
+
+            {stemItems.map((item, index) => (
+              <StemBranchItem
+                key={item.id}
+                item={item}
+                index={index}
+                isMobile={false}
+                side={getItemSide(item, index)}
+                isOwner={isOwner && !isFocused}
+                nodesById={nodesById}
+                nodeToArtifacts={nodeToArtifacts}
+                artifactsById={artifactsById}
+                artifactToNodes={artifactToNodes}
+                stemId={stemId}
+                stemUserId={stemUserId}
+                stemUsername={stemUsername}
+                currentUserId={currentUserId}
+                onNodeClick={focusNode}
               />
             ))}
-            <div style={organicStyles.growthTip} />
+
+            {stemItems.length === 0 && isOwner && (
+              <div style={{ gridColumn: "1 / -1", gridRow: 1, textAlign: "center", padding: "60px 20px" }}>
+                <p style={styles.empty}>Add your first node or artifact to start growing your stem</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Stem items */}
-        {stemItems.map((item, index) => (
-          <StemBranchItem
-            key={item.id}
-            item={item}
-            index={index}
-            isMobile={isMobile}
-            side={getItemSide(item, index)}
-            isOwner={isOwner}
-            nodesById={nodesById}
-            nodeToArtifacts={nodeToArtifacts}
-            artifactsById={artifactsById}
-            artifactToNodes={artifactToNodes}
-            stemId={stemId}
-            stemUserId={stemUserId}
-            stemUsername={stemUsername}
-            currentUserId={currentUserId}
-            onNodeClick={focusNode}
-          />
-        ))}
-
-        {/* Empty stem state */}
-        {stemItems.length === 0 && isOwner && (
+        {/* ── Focused node panel (slides in from the node's side) ──── */}
+        {isFocused && focusedNode && (
           <div
             style={{
-              gridColumn: isMobile ? "2" : "1 / -1",
-              gridRow: 1,
-              textAlign: "center",
-              padding: "60px 20px",
+              flex: "1 1 auto",
+              minWidth: 0,
+              order: stemShiftsLeft ? 2 : 0,
+              padding: isMobile ? "0 16px" : "0 32px",
+              animation: "fadeUp 0.25s ease-out",
             }}
           >
-            <p style={styles.empty}>
-              Add your first node or artifact to start growing your stem
-            </p>
+            {/* Breadcrumb */}
+            <div style={organicStyles.breadcrumb}>
+              <button
+                onClick={() => {
+                  setFocusedNodeStack([]);
+                  if (typeof window !== "undefined") {
+                    window.history.replaceState(null, "", window.location.pathname);
+                  }
+                }}
+                style={organicStyles.breadcrumbLink}
+              >
+                {"\u2190"} Stem
+              </button>
+              {breadcrumbs.map((crumb, i) => (
+                <span key={crumb.id} style={organicStyles.breadcrumbItem}>
+                  <span style={organicStyles.breadcrumbSep}>/</span>
+                  {i < breadcrumbs.length - 1 ? (
+                    <button
+                      onClick={() => setFocusedNodeStack((prev) => prev.slice(0, i + 1))}
+                      style={organicStyles.breadcrumbLink}
+                    >
+                      {crumb.emoji && `${crumb.emoji} `}{crumb.title}
+                    </button>
+                  ) : (
+                    <span style={organicStyles.breadcrumbCurrent}>
+                      {crumb.emoji && `${crumb.emoji} `}{crumb.title}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+
+            {/* Node header */}
+            <div style={{ marginBottom: 32 }}>
+              {focusedNode.emoji && (
+                <span style={{ fontSize: 32, marginBottom: 8, display: "block" }}>{focusedNode.emoji}</span>
+              )}
+              <h2 style={organicStyles.focusedTitle}>{focusedNode.title}</h2>
+              {focusedNode.description && (
+                <p style={organicStyles.focusedDesc}>{focusedNode.description}</p>
+              )}
+              <span style={organicStyles.focusedCount}>
+                {focusedNodeArtifacts.length} {focusedNodeArtifacts.length === 1 ? "artifact" : "artifacts"}
+              </span>
+            </div>
+
+            {/* Mini organic trunk for this node's artifacts */}
+            <div style={{ ...organicStyles.grid, gridTemplateColumns: "1fr 4px 1fr", maxWidth: 700 }}>
+              {focusedNodeArtifacts.length > 0 && (
+                <div style={{
+                  ...organicStyles.trunk,
+                  gridColumn: "2",
+                  gridRow: `1 / ${focusedNodeArtifacts.length + focusedNodeChildren.length + 2}`,
+                }}>
+                  {[...focusedNodeArtifacts, ...focusedNodeChildren].map((_, i) => (
+                    <div key={i} style={{
+                      ...organicStyles.junctionDot,
+                      top: `${((i + 0.5) / Math.max(focusedNodeArtifacts.length + focusedNodeChildren.length, 1)) * 100}%`,
+                    }} />
+                  ))}
+                </div>
+              )}
+
+              {focusedNodeArtifacts.map((artifact, i) => (
+                <div
+                  key={artifact.id}
+                  style={{
+                    ...organicStyles.branchItem,
+                    gridColumn: i % 2 === 0 ? "2 / 4" : "1 / 3",
+                    gridRow: i + 1,
+                    flexDirection: i % 2 === 0 ? "row" : "row-reverse",
+                  }}
+                >
+                  <div style={organicStyles.connector} />
+                  <div style={organicStyles.cardWrapper}>
+                    <ArtifactCard
+                      artifact={artifact}
+                      stemId={stemId}
+                      stemUserId={stemUserId}
+                      currentUserId={currentUserId}
+                      stemUsername={stemUsername}
+                      nodeNames={
+                        (artifactToNodes.get(artifact.id)?.length ?? 0) > 1
+                          ? artifactToNodes.get(artifact.id)!
+                              .filter((nid) => nid !== focusedNodeId)
+                              .map((nid) => nodesById.get(nid)?.title ?? "")
+                              .filter(Boolean)
+                          : undefined
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Sub-nodes as clickable cards on the mini-trunk */}
+              {focusedNodeChildren.map((child, i) => {
+                const childArtifactCount = (nodeToArtifacts.get(child.id) || []).length;
+                const rowIdx = focusedNodeArtifacts.length + i + 1;
+                return (
+                  <div
+                    key={child.id}
+                    style={{
+                      ...organicStyles.branchItem,
+                      gridColumn: rowIdx % 2 === 0 ? "1 / 3" : "2 / 4",
+                      gridRow: rowIdx,
+                      flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row",
+                    }}
+                  >
+                    <div style={organicStyles.connector} />
+                    <NodeCard
+                      node={child}
+                      artifactCount={childArtifactCount}
+                      onClick={() => focusNode(child.id)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {focusedNodeArtifacts.length === 0 && focusedNodeChildren.length === 0 && (
+              <p style={{ ...styles.empty, padding: "40px 0" }}>No artifacts in this node yet.</p>
+            )}
+
+            {isOwner && (
+              <div style={{ marginTop: 20, maxWidth: 400 }}>
+                <AddNodeForm stemId={stemId} parentId={focusedNodeId} />
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Owner: add node button below stem */}
-      {isOwner && (
+      {isOwner && !isFocused && (
         <div style={{ maxWidth: 400, margin: "24px auto 0" }}>
           <AddNodeForm stemId={stemId} parentId={null} />
         </div>
       )}
 
       {/* Add item popover */}
-      {popoverPosition && (
+      {popoverPosition && !isFocused && (
         <AddItemPopover
           position={popoverPosition}
           stemId={stemId}
@@ -367,8 +421,7 @@ export function OrganicStem({
       {/* Floating add button (owner) */}
       {isOwner && (
         <FloatingAddButton
-          onAdd={(type) => {
-            // Scroll to the add form area — the FAB is a quick entry point
+          onAdd={() => {
             const main = document.querySelector("main");
             if (main) main.scrollTo({ top: 0, behavior: "smooth" });
           }}
@@ -408,7 +461,7 @@ function StemBranchItem({
   stemUserId: string;
   stemUsername: string;
   currentUserId: string | undefined;
-  onNodeClick: (nodeId: string) => void;
+  onNodeClick: (nodeId: string, side?: "left" | "right") => void;
 }) {
   const drag = useDragContext();
 
@@ -441,7 +494,7 @@ function StemBranchItem({
           <NodeCard
             node={node}
             artifactCount={artifactCount}
-            onClick={() => onNodeClick(node.id)}
+            onClick={() => onNodeClick(node.id, side)}
           />
         );
       })()
