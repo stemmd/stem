@@ -729,6 +729,7 @@ export default function StemPage() {
 
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [showPendingNodes, setShowPendingNodes] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Build node tree and artifact mapping (memoized to avoid recomputation on state changes)
   const { approvedNodes, pendingNodes, rootNodes, childNodesMap, artifactToNodes, nodeToArtifacts, artifactsById, rootArtifacts, hasNodes } = useMemo(() => {
@@ -804,7 +805,12 @@ export default function StemPage() {
       <main style={styles.main}>
 
         {/* Stem header — centered above the trunk */}
-        <StemHeader stem={stem} stemCategories={stemCategories}>
+        <StemHeader
+          stem={stem}
+          stemCategories={stemCategories}
+          isOwner={isOwner}
+          onSettingsClick={() => setShowSettings(true)}
+        >
           {isOwner ? (
             <OwnerActions stem={stem} artifacts={artifacts} />
           ) : (
@@ -888,14 +894,6 @@ export default function StemPage() {
           <PendingSuggestions artifacts={pendingArtifacts} stemId={stem.id} />
         )}
 
-        {isOwner && !!stem.is_branch && (
-          <BranchMembersSection stemId={stem.id} members={branchMembers} />
-        )}
-
-        {isOwner && (
-          <StemSettings stem={stem} stemCategories={stemCategories} />
-        )}
-
         {/* Related stems */}
         {relatedStems.length > 0 && (
           <div style={relatedStemStyles.section}>
@@ -918,6 +916,28 @@ export default function StemPage() {
           </div>
         )}
       </main>
+
+      {/* Settings overlay */}
+      {isOwner && showSettings && (
+        <div style={settingsOverlayStyles.backdrop} onClick={() => setShowSettings(false)}>
+          <div style={settingsOverlayStyles.card} onClick={(e) => e.stopPropagation()}>
+            <div style={settingsOverlayStyles.header}>
+              <span style={settingsOverlayStyles.headerTitle}>Settings</span>
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                style={settingsOverlayStyles.closeBtn}
+              >
+                {"✕"}
+              </button>
+            </div>
+            <StemSettings stem={stem} stemCategories={stemCategories} />
+            {!!stem.is_branch && (
+              <BranchMembersSection stemId={stem.id} members={branchMembers} />
+            )}
+          </div>
+        </div>
+      )}
 
       {showSignupPrompt && (
         <div style={styles.signupPrompt}>
@@ -977,5 +997,52 @@ const relatedStemStyles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Mono', monospace",
     fontSize: 11,
     color: "var(--ink-light)",
+  },
+};
+
+const settingsOverlayStyles: Record<string, React.CSSProperties> = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.4)",
+    zIndex: 100,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: 80,
+    overflowY: "auto",
+  },
+  card: {
+    background: "var(--surface)",
+    border: "1px solid var(--paper-dark)",
+    borderRadius: 16,
+    padding: "24px 28px",
+    maxWidth: 520,
+    width: "100%",
+    maxHeight: "calc(100vh - 120px)",
+    overflowY: "auto",
+    boxShadow: "0 12px 48px rgba(0,0,0,0.2)",
+    animation: "fadeUp 0.2s ease-out",
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 16,
+    fontWeight: 600,
+    color: "var(--ink)",
+  },
+  closeBtn: {
+    background: "none",
+    border: "none",
+    fontSize: 18,
+    color: "var(--ink-light)",
+    cursor: "pointer",
+    padding: "4px 8px",
+    borderRadius: 6,
   },
 };

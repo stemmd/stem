@@ -6,7 +6,6 @@ import { styles } from "./stem-styles";
 import type { Stem, StemCategory } from "./types";
 
 export function StemSettings({ stem, stemCategories }: { stem: Stem; stemCategories: StemCategory[] }) {
-  const [open, setOpen] = useState(false);
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const deleteFetcher = useFetcher<{ deleteError?: string }>();
   const [visibility, setVisibility] = useState(stem.visibility ?? (stem.is_public ? "public" : "private"));
@@ -20,13 +19,8 @@ export function StemSettings({ stem, stemCategories }: { stem: Stem; stemCategor
   const saved = fetcher.state === "idle" && fetcher.data?.success;
 
   return (
-    <div style={styles.settingsSection}>
-      <button style={styles.settingsToggle} onClick={() => setOpen((o) => !o)}>
-        Settings {open ? "\u25B2" : "\u25BC"}
-      </button>
-
-      {open && (
-        <fetcher.Form method="post" style={styles.settingsForm}>
+    <div>
+        <fetcher.Form method="post" style={{ display: "flex", flexDirection: "column" as const, gap: 20 }}>
           <input type="hidden" name="intent" value="update_settings" />
 
           {/* Title */}
@@ -83,10 +77,7 @@ export function StemSettings({ stem, stemCategories }: { stem: Stem; stemCategor
             {fetcher.data?.error && <span style={{ fontSize: 13, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>{fetcher.data.error}</span>}
           </div>
         </fetcher.Form>
-      )}
 
-      {/* Delete stem */}
-      {open && (
         <div style={{ marginTop: 24, borderTop: "1px solid var(--paper-dark)", paddingTop: 16 }}>
           {!showDelete ? (
             <button type="button" onClick={() => setShowDelete(true)} style={styles.dangerBtn}>
@@ -125,7 +116,6 @@ export function StemSettings({ stem, stemCategories }: { stem: Stem; stemCategor
             </deleteFetcher.Form>
           )}
         </div>
-      )}
     </div>
   );
 }

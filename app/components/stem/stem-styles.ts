@@ -6,7 +6,7 @@ export const styles: Record<string, React.CSSProperties> = {
 
   stemHeader: { marginBottom: 40 },
   stemEmoji: { fontSize: 40, lineHeight: 1, display: "block", marginBottom: 8 },
-  stemMeta: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 },
+  stemMeta: { display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 12 },
   authorLink: {
     fontFamily: "'DM Mono', monospace", fontSize: 13,
     color: "var(--ink-light)", textDecoration: "none",
@@ -21,7 +21,7 @@ export const styles: Record<string, React.CSSProperties> = {
     color: "var(--ink-mid)", lineHeight: 1.6, marginBottom: 20, maxWidth: 520,
   },
   stemActions: {
-    display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" as const,
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" as const,
   },
   followPill: {
     display: "inline-block", padding: "7px 18px",
@@ -169,7 +169,7 @@ export const styles: Record<string, React.CSSProperties> = {
   },
 
   stemCatRow: {
-    display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16,
+    display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16, justifyContent: "center",
   },
   stemCatPill: {
     fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "var(--forest)",
