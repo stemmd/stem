@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useFetcher } from "@remix-run/react";
 import { VisibilityPicker, ContributionPicker, CategoryPicker } from "~/components/StemPickers";
+import { EmojiPicker } from "~/components/EmojiPicker";
 import { styles } from "./stem-styles";
 import type { Stem, StemCategory } from "./types";
 
@@ -59,15 +60,7 @@ export function StemSettings({ stem, stemCategories }: { stem: Stem; stemCategor
           {/* Emoji */}
           <div>
             <p style={styles.settingsFieldLabel}>Emoji</p>
-            <input
-              type="text"
-              value={emoji}
-              onChange={(e) => { const v = [...e.target.value].slice(-1).join(""); setEmoji(v); }}
-              placeholder="\uD83C\uDF31"
-              style={styles.settingsEmojiCustom}
-              title="Type any emoji"
-            />
-            <input type="hidden" name="emoji" value={emoji} />
+            <EmojiPicker value={emoji} onChange={setEmoji} name="emoji" />
           </div>
 
           <div style={styles.settingsDivider} />

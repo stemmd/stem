@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFetcher } from "@remix-run/react";
+import { EmojiPicker } from "~/components/EmojiPicker";
 import { styles } from "./stem-styles";
 import type { Node, Artifact } from "./types";
 import { ArtifactCard } from "./ArtifactCard";
@@ -34,6 +35,7 @@ export function NodeSection({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editEmoji, setEditEmoji] = useState(node.emoji ?? "");
   const editFetcher = useFetcher();
   const deleteFetcher = useFetcher();
 
@@ -146,13 +148,7 @@ export function NodeSection({
                 placeholder="Node title"
                 style={styles.noteInput}
               />
-              <input
-                type="text"
-                name="emoji"
-                defaultValue={node.emoji ?? ""}
-                placeholder="Emoji (optional)"
-                style={{ ...styles.noteInput, width: 60 }}
-              />
+              <EmojiPicker value={editEmoji} onChange={setEditEmoji} name="emoji" />
               <textarea
                 name="description"
                 defaultValue={node.description ?? ""}

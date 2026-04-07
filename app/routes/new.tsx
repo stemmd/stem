@@ -9,6 +9,7 @@ import { useState } from "react";
 import { requireUser } from "~/lib/auth.server";
 import { nanoid } from "nanoid";
 import { StemMark } from "~/components/StemMark";
+import { EmojiPicker } from "~/components/EmojiPicker";
 import { VisibilityPicker, ContributionPicker, CategoryPicker, CATEGORIES } from "~/components/StemPickers";
 import { checkContent } from "~/lib/moderation";
 
@@ -176,15 +177,7 @@ export default function New() {
           {/* Emoji */}
           <div style={styles.emojiSection}>
             <p style={styles.emojiLabel}>Emoji (optional — defaults to your first category)</p>
-            <input
-              type="text"
-              value={emoji}
-              onChange={(e) => setEmoji([...e.target.value].slice(-1).join(""))}
-              placeholder="🌱"
-              style={styles.emojiInput}
-              title="Type any emoji"
-            />
-            <input type="hidden" name="emoji" value={emoji} />
+            <EmojiPicker value={emoji} onChange={setEmoji} name="emoji" />
           </div>
 
           {!showDesc ? (

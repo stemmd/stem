@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useFetcher } from "@remix-run/react";
+import { EmojiPicker } from "~/components/EmojiPicker";
 import { styles } from "./stem-styles";
 
 export function AddNodeForm({ stemId, parentId }: { stemId: string; parentId: string | null }) {
@@ -29,14 +30,7 @@ export function AddNodeForm({ stemId, parentId }: { stemId: string; parentId: st
       <input type="hidden" name="intent" value="create_node" />
       {parentId && <input type="hidden" name="parent_id" value={parentId} />}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input
-          type="text"
-          value={emoji}
-          onChange={(e) => { const v = [...e.target.value].slice(-1).join(""); setEmoji(v); }}
-          placeholder="\uD83C\uDFF7"
-          style={styles.settingsEmojiCustom}
-          name="emoji"
-        />
+        <EmojiPicker value={emoji} onChange={setEmoji} name="emoji" />
         <input
           type="text"
           name="title"
