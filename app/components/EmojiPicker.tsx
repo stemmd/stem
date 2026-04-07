@@ -1,47 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-
-const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
-  {
-    label: "Smileys",
-    emojis: ["😀","😂","🥹","😊","😇","🤩","🤔","🤯","😎","🥳","😴","🤓","🧐","😤","💀","👻","🤖","👽","💩"],
-  },
-  {
-    label: "People",
-    emojis: ["👋","🤝","👏","🙌","🤲","💪","🧠","👀","👁️","🫀","🦾","🧑‍🚀","🧑‍🔬","🧑‍🎨","🧑‍💻","🧑‍🏫","🧑‍🍳","🧑‍🌾","🏃"],
-  },
-  {
-    label: "Nature",
-    emojis: ["🌱","🌿","🍀","🌳","🌲","🌵","🌸","🌺","🌻","🌼","🍄","🐝","🦋","🐛","🐚","🦑","🐙","🐬","🐳","🦈","🐊","🦎","🐍","🦅","🦉","🐧","🐦","🦜"],
-  },
-  {
-    label: "Food",
-    emojis: ["🍎","🍊","🍋","🍇","🍓","🫐","🥑","🌽","🥕","🧄","🍞","🧀","🍕","🍜","🍣","🍱","🥘","🍪","🍫","🍰","🧁","☕","🍵","🧃","🍷","🍺"],
-  },
-  {
-    label: "Travel",
-    emojis: ["🌍","🌎","🌏","🗺️","🏔️","⛰️","🌋","🏖️","🏜️","🏕️","🗼","🗽","🏛️","⛩️","🕌","🕍","🏰","🚀","✈️","🚂","🚢","🗿"],
-  },
-  {
-    label: "Activities",
-    emojis: ["⚽","🏀","🎾","🏋️","🧗","🎯","🎮","🎲","🧩","🎨","🎭","🎬","🎤","🎧","🎵","🎶","🎹","🎸","🥁","🎻","🎺"],
-  },
-  {
-    label: "Objects",
-    emojis: ["💡","🔦","📷","🔬","🔭","🧬","💊","🩺","📚","📖","📝","✏️","🖊️","📐","📏","🗂️","📁","📌","📎","🔗","🔧","🔨","⚙️","🧲","💎","🪙"],
-  },
-  {
-    label: "Symbols",
-    emojis: ["❤️","🧡","💛","💚","💙","💜","🤎","🖤","🤍","💯","✨","⭐","🌟","💫","⚡","🔥","💧","🌊","♻️","☮️","☯️","🏳️‍🌈","🎌","🏴‍☠️"],
-  },
-  {
-    label: "Science",
-    emojis: ["⚛️","🧪","🧫","🧬","🔬","🔭","📡","🛰️","🪐","🌙","☀️","🌡️","🧲","⚗️","💉","🩻","🦠","🧮"],
-  },
-  {
-    label: "Flags",
-    emojis: ["🏁","🚩","🎌","🏴","🏳️","🇺🇸","🇬🇧","🇯🇵","🇫🇷","🇩🇪","🇮🇹","🇪🇸","🇧🇷","🇮🇳","🇨🇳","🇰🇷","🇦🇺","🇨🇦","🇲🇽"],
-  },
-];
+import { useState, useRef, useEffect, useMemo } from "react";
+import { EMOJI_CATEGORIES } from "./emoji-data";
 
 export function EmojiPicker({
   value,
@@ -54,7 +12,9 @@ export function EmojiPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -79,12 +39,26 @@ export function EmojiPicker({
     setOpen(false);
   };
 
+  const filteredCategories = useMemo(() => {
+    if (!search) return EMOJI_CATEGORIES;
+    const q = search.toLowerCase();
+    return EMOJI_CATEGORIES
+      .filter((cat) => cat.label.toLowerCase().includes(q))
+  }, [search]);
+
+  const scrollToCategory = (index: number) => {
+    setActiveCategory(index);
+    setSearch("");
+    const el = gridRef.current?.querySelector(`[data-cat="${index}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div ref={ref} style={pickerStyles.container}>
       {name && <input type="hidden" name={name} value={value} />}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { setOpen((o) => !o); setSearch(""); }}
         style={pickerStyles.trigger}
         title={value ? "Change emoji" : "Pick an emoji"}
       >
@@ -93,12 +67,13 @@ export function EmojiPicker({
 
       {open && (
         <div style={pickerStyles.dropdown}>
+          {/* Search */}
           <div style={pickerStyles.searchRow}>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter..."
+              placeholder="Search category..."
               style={pickerStyles.searchInput}
               autoFocus
             />
@@ -113,35 +88,52 @@ export function EmojiPicker({
               </button>
             )}
           </div>
-          <div style={pickerStyles.grid}>
-            {EMOJI_CATEGORIES.map((cat) => {
-              const filtered = search
-                ? cat.emojis.filter(() => cat.label.toLowerCase().includes(search.toLowerCase()))
-                : cat.emojis;
-              if (filtered.length === 0) return null;
-              return (
-                <div key={cat.label}>
-                  {!search && (
-                    <div style={pickerStyles.categoryLabel}>{cat.label}</div>
-                  )}
-                  <div style={pickerStyles.emojiRow}>
-                    {filtered.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => handleSelect(emoji)}
-                        style={{
-                          ...pickerStyles.emojiBtn,
-                          background: emoji === value ? "var(--leaf)" : "none",
-                        }}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+
+          {/* Category tabs */}
+          {!search && (
+            <div style={pickerStyles.categoryTabs}>
+              {EMOJI_CATEGORIES.map((cat, i) => (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => scrollToCategory(i)}
+                  style={{
+                    ...pickerStyles.categoryTab,
+                    borderBottomColor: activeCategory === i ? "var(--forest)" : "transparent",
+                  }}
+                  title={cat.label}
+                >
+                  {cat.emojis[0]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Emoji grid */}
+          <div ref={gridRef} style={pickerStyles.grid}>
+            {filteredCategories.map((cat, catIndex) => (
+              <div key={cat.label} data-cat={EMOJI_CATEGORIES.indexOf(cat)}>
+                <div style={pickerStyles.categoryLabel}>{cat.label}</div>
+                <div style={pickerStyles.emojiRow}>
+                  {cat.emojis.map((emoji, i) => (
+                    <button
+                      key={`${emoji}-${i}`}
+                      type="button"
+                      onClick={() => handleSelect(emoji)}
+                      style={{
+                        ...pickerStyles.emojiBtn,
+                        background: emoji === value ? "var(--leaf)" : "none",
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            ))}
+            {filteredCategories.length === 0 && (
+              <p style={pickerStyles.noResults}>No matching category</p>
+            )}
           </div>
         </div>
       )}
@@ -180,28 +172,23 @@ const pickerStyles: Record<string, React.CSSProperties> = {
     top: "100%",
     left: 0,
     marginTop: 6,
-    width: 320,
-    maxHeight: 360,
-    overflowY: "auto",
+    width: 352,
     background: "var(--surface)",
     border: "1px solid var(--paper-dark)",
     borderRadius: 12,
     boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
     zIndex: 200,
-    padding: "8px",
+    display: "flex",
+    flexDirection: "column",
   },
   searchRow: {
     display: "flex",
     gap: 6,
-    marginBottom: 8,
-    position: "sticky",
-    top: 0,
-    background: "var(--surface)",
-    paddingBottom: 4,
+    padding: "8px 8px 0",
   },
   searchInput: {
     flex: 1,
-    padding: "6px 10px",
+    padding: "7px 10px",
     borderRadius: 8,
     border: "1px solid var(--paper-dark)",
     background: "var(--paper)",
@@ -211,7 +198,7 @@ const pickerStyles: Record<string, React.CSSProperties> = {
     outline: "none",
   },
   clearBtn: {
-    padding: "6px 10px",
+    padding: "7px 10px",
     borderRadius: 8,
     border: "1px solid var(--paper-dark)",
     background: "none",
@@ -221,29 +208,54 @@ const pickerStyles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
+  categoryTabs: {
+    display: "flex",
+    gap: 0,
+    padding: "6px 8px 0",
+    borderBottom: "1px solid var(--paper-dark)",
+    overflowX: "auto",
+  },
+  categoryTab: {
+    flex: "0 0 auto",
+    padding: "4px 6px 6px",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    background: "none",
+    fontSize: 18,
+    cursor: "pointer",
+    lineHeight: 1,
+    borderRadius: 0,
+  },
   grid: {
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    gap: 2,
+    padding: "6px 8px 8px",
+    maxHeight: 320,
+    overflowY: "auto",
   },
   categoryLabel: {
     fontSize: 11,
     fontFamily: "'DM Mono', monospace",
     color: "var(--ink-light)",
-    padding: "6px 4px 2px",
+    padding: "8px 2px 4px",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
+    position: "sticky",
+    top: 0,
+    background: "var(--surface)",
+    zIndex: 1,
   },
   emojiRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: 2,
+    gap: 1,
   },
   emojiBtn: {
     width: 36,
     height: 36,
     border: "none",
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: "pointer",
     fontSize: 22,
     display: "flex",
@@ -252,5 +264,12 @@ const pickerStyles: Record<string, React.CSSProperties> = {
     transition: "background 0.1s",
     padding: 0,
     lineHeight: 1,
+  },
+  noResults: {
+    fontSize: 13,
+    fontFamily: "'DM Sans', sans-serif",
+    color: "var(--ink-light)",
+    textAlign: "center",
+    padding: "24px 0",
   },
 };
