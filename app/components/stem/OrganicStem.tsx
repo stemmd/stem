@@ -281,37 +281,34 @@ export function OrganicStem({
           gridTemplateColumns: isMobile ? "4px 1fr" : "1fr 4px 1fr",
         }}
       >
-        {/* The trunk line */}
-        <div
-          style={{
-            ...organicStyles.trunk,
-            gridColumn: isMobile ? "1" : "2",
-            gridRow: `1 / ${stemItems.length + 2}`,
-          }}
-          onClick={isOwner ? (e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const rowH = rect.height / Math.max(stemItems.length, 1);
-            const idx = Math.round(y / rowH);
-            handleTrunkClick(y, Math.min(idx, stemItems.length));
-          } : undefined}
-        >
-          {/* Junction dots */}
-          {stemItems.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                ...organicStyles.junctionDot,
-                top: `${((i + 0.5) / Math.max(stemItems.length, 1)) * 100}%`,
-              }}
-            />
-          ))}
-
-          {/* Pulsing growth tip */}
-          {stemItems.length > 0 && (
+        {/* The trunk line — only visible when there are items */}
+        {stemItems.length > 0 && (
+          <div
+            style={{
+              ...organicStyles.trunk,
+              gridColumn: isMobile ? "1" : "2",
+              gridRow: `1 / ${stemItems.length + 2}`,
+            }}
+            onClick={isOwner ? (e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const y = e.clientY - rect.top;
+              const rowH = rect.height / Math.max(stemItems.length, 1);
+              const idx = Math.round(y / rowH);
+              handleTrunkClick(y, Math.min(idx, stemItems.length));
+            } : undefined}
+          >
+            {stemItems.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  ...organicStyles.junctionDot,
+                  top: `${((i + 0.5) / Math.max(stemItems.length, 1)) * 100}%`,
+                }}
+              />
+            ))}
             <div style={organicStyles.growthTip} />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Stem items */}
         {stemItems.map((item, index) => (
