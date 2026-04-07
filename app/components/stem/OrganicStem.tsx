@@ -415,11 +415,12 @@ function StemBranchItem({
 }) {
   const drag = useDragContext();
 
+  // Span 2 columns so the connector bridges into the trunk column
   const gridColumn = isMobile
     ? "2"
     : side === "left"
-      ? "1"
-      : "3";
+      ? "1 / 3"   // left content + trunk
+      : "2 / 4";  // trunk + right content
 
   const dragProps = isOwner && drag
     ? {
@@ -541,19 +542,20 @@ const organicStyles: Record<string, React.CSSProperties> = {
     background: "var(--forest)",
     borderRadius: 2,
     justifySelf: "center",
-    opacity: 0.7,
+    opacity: 0.8,
     cursor: "default",
-    zIndex: 1,
+    zIndex: 3,
   },
 
   junctionDot: {
     position: "absolute" as const,
     left: "50%",
     transform: "translate(-50%, -50%)",
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: "50%",
     background: "var(--forest)",
+    zIndex: 4,
   },
 
   growthTip: {
@@ -577,11 +579,12 @@ const organicStyles: Record<string, React.CSSProperties> = {
   },
 
   connector: {
-    width: 32,
+    width: 40,
     height: 2,
     background: "var(--forest)",
-    opacity: 0.4,
+    opacity: 0.5,
     flexShrink: 0,
+    alignSelf: "center",
   },
 
   cardWrapper: {
