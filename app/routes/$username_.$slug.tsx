@@ -394,6 +394,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       .bind(artifactId, stem.id, user.id, url, og.title, og.description, og.image, og.favicon, note, quote, og.source_type, og.embed_url, artifactStatus)
       .run();
 
+    const nodeId = (form.get("nodeId") as string | null)?.trim() || null;
     await Promise.all([
       artifactStatus === "approved"
         ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
@@ -401,6 +402,10 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       createNotification({
         db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
       }),
+      nodeId
+        ? db.prepare("INSERT OR IGNORE INTO artifact_nodes (id, artifact_id, node_id, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position), 0) + 1000 FROM artifact_nodes WHERE node_id = ?))")
+            .bind(`an_${nanoid(10)}`, artifactId, nodeId, nodeId).run()
+        : Promise.resolve(),
     ]);
 
     return json({ success: true, artifactId, pending: artifactStatus === "pending" });
@@ -425,6 +430,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       "INSERT INTO artifacts (id, stem_id, added_by, title, body, source_type, status) VALUES (?, ?, ?, ?, ?, 'note', ?)"
     ).bind(artifactId, stem.id, user.id, title, body, artifactStatus).run();
 
+    const nodeId = (form.get("nodeId") as string | null)?.trim() || null;
     await Promise.all([
       artifactStatus === "approved"
         ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
@@ -432,6 +438,10 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       createNotification({
         db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
       }),
+      nodeId
+        ? db.prepare("INSERT OR IGNORE INTO artifact_nodes (id, artifact_id, node_id, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position), 0) + 1000 FROM artifact_nodes WHERE node_id = ?))")
+            .bind(`an_${nanoid(10)}`, artifactId, nodeId, nodeId).run()
+        : Promise.resolve(),
     ]);
 
     return json({ success: true, artifactId, pending: artifactStatus === "pending" });
@@ -458,6 +468,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       "INSERT INTO artifacts (id, stem_id, added_by, title, note, source_type, file_key, file_mime, file_size, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).bind(artifactId, stem.id, user.id, title, note, sourceType, fileKey, fileMime, fileSize, artifactStatus).run();
 
+    const nodeId = (form.get("nodeId") as string | null)?.trim() || null;
     await Promise.all([
       artifactStatus === "approved"
         ? db.prepare("UPDATE stems SET updated_at = datetime('now') WHERE id = ?").bind(stem.id).run()
@@ -465,6 +476,10 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
       createNotification({
         db, userId: stem.user_id, type: "new_artifact", actorId: user.id, stemId: stem.id, artifactId,
       }),
+      nodeId
+        ? db.prepare("INSERT OR IGNORE INTO artifact_nodes (id, artifact_id, node_id, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position), 0) + 1000 FROM artifact_nodes WHERE node_id = ?))")
+            .bind(`an_${nanoid(10)}`, artifactId, nodeId, nodeId).run()
+        : Promise.resolve(),
     ]);
 
     return json({ success: true, artifactId, pending: artifactStatus === "pending" });
@@ -881,6 +896,9 @@ export default function StemPage() {
           stemUsername={stem.username}
           currentUserId={user?.id}
           isOwner={isOwner}
+          canContribute={canContribute}
+          contributionMode={stem.contribution_mode}
+          canUpload={userHasApprovedArtifact}
         />
 
         {/* Pending nodes (owner review) */}

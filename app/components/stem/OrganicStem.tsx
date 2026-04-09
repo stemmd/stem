@@ -4,6 +4,7 @@ import { styles } from "./stem-styles";
 import { ArtifactCard } from "./ArtifactCard";
 import { NodeCard } from "./NodeCard";
 import { AddNodeForm } from "./AddNodeForm";
+import { AddArtifactForm } from "./AddArtifactForm";
 import { AddItemPopover } from "./AddItemPopover";
 import { DragProvider, useDragContext } from "./DragContext";
 import { FloatingAddButton } from "./FloatingAddButton";
@@ -32,6 +33,9 @@ export function OrganicStem({
   stemUsername,
   currentUserId,
   isOwner,
+  canContribute,
+  contributionMode,
+  canUpload,
 }: {
   stemId: string;
   childNodesMap: Map<string, Node[]>;
@@ -45,6 +49,9 @@ export function OrganicStem({
   stemUsername: string;
   currentUserId: string | undefined;
   isOwner: boolean;
+  canContribute: boolean;
+  contributionMode: string;
+  canUpload: boolean;
 }) {
   const [focusedNodeStack, setFocusedNodeStack] = useState<string[]>([]);
   const [focusedSide, setFocusedSide] = useState<"left" | "right">("right");
@@ -378,8 +385,21 @@ export function OrganicStem({
               })}
             </div>
 
-            {focusedNodeArtifacts.length === 0 && focusedNodeChildren.length === 0 && (
+            {focusedNodeArtifacts.length === 0 && focusedNodeChildren.length === 0 && !canContribute && (
               <p style={{ ...styles.empty, padding: "40px 0" }}>No artifacts in this node yet.</p>
+            )}
+
+            {canContribute && (
+              <div style={{ maxWidth: 640, marginTop: 24 }}>
+                <AddArtifactForm
+                  stemId={stemId}
+                  isOwner={isOwner}
+                  stemUsername={stemUsername}
+                  contributionMode={contributionMode}
+                  canUpload={canUpload}
+                  nodeId={focusedNodeId}
+                />
+              </div>
             )}
 
             {isOwner && (

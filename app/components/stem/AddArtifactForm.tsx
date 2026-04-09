@@ -13,12 +13,14 @@ export function AddArtifactForm({
   stemUsername,
   contributionMode,
   canUpload,
+  nodeId,
 }: {
   stemId: string;
   isOwner: boolean;
   stemUsername: string;
   contributionMode: string;
   canUpload: boolean;
+  nodeId?: string | null;
 }) {
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
@@ -219,6 +221,7 @@ export function AddArtifactForm({
     return (
       <addFetcher.Form method="post" style={styles.addArtifactForm}>
         <input type="hidden" name="intent" value="add_note" />
+        {nodeId && <input type="hidden" name="nodeId" value={nodeId} />}
         {tabBar}
         <input
           type="text"
@@ -316,6 +319,7 @@ export function AddArtifactForm({
         remixForm.set("source_type", sourceType);
         if (uploadTitle.trim()) remixForm.set("title", uploadTitle.trim());
         if (uploadNote.trim()) remixForm.set("note", uploadNote.trim());
+        if (nodeId) remixForm.set("nodeId", nodeId);
         addFetcher.submit(remixForm, { method: "post" });
       } catch (err: unknown) {
         setUploadError(err instanceof Error ? err.message : "Upload failed");
@@ -376,6 +380,7 @@ export function AddArtifactForm({
   return (
     <addFetcher.Form method="post" style={styles.addArtifactForm}>
       <input type="hidden" name="intent" value="add_artifact" />
+      {nodeId && <input type="hidden" name="nodeId" value={nodeId} />}
       {tabBar}
       {/* Pass prefetched OG data to avoid re-fetching in the action */}
       {og && !("error" in og) && (
