@@ -334,12 +334,10 @@ export default function Home() {
     setSubmitting(true);
     setInlineError("");
     try {
-      const turnstileEl = document.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null;
-      const turnstile = turnstileEl?.value || "";
       const res = await fetch(`${API_BASE}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, turnstile }),
+        body: JSON.stringify({ username, email, skip_turnstile: true }),
       });
       const data = await res.json<{ success?: boolean; error?: string }>();
       if (res.ok && data.success) {
@@ -351,8 +349,6 @@ export default function Home() {
           setCheckState("taken");
         } else if (data.error === "email_taken") {
           setInlineError("that email\u2019s already on the list");
-        } else if (data.error === "captcha_failed") {
-          setInlineError("Verification failed. Please wait a moment and try again.");
         } else {
           setInlineError("something went wrong \u2014 try again");
         }
@@ -386,7 +382,6 @@ export default function Home() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS_TEXT }} />
-      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
 
       {/* ── Nav ── */}
       <nav style={styles.nav} className="landing-nav">
@@ -690,7 +685,6 @@ export default function Home() {
                     onChange={(e) => setEmail(e.target.value)}
                   />
                   {inlineError && <div style={styles.inlineError}>{inlineError}</div>}
-                  <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 12 }} />
                   <button
                     className="submit-btn"
                     style={{ ...styles.submitBtn, opacity: (!canSubmit || submitting) ? 0.5 : 1, cursor: (!canSubmit || submitting) ? "not-allowed" : "pointer" }}

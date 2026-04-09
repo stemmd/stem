@@ -85,7 +85,7 @@ export default function Waitlist() {
         body: JSON.stringify({
           username,
           email: email.toLowerCase(),
-          turnstile: (document.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value || "",
+          skip_turnstile: true,
         }),
       });
       const data = await res.json<{ success?: boolean; error?: string }>();
@@ -95,8 +95,6 @@ export default function Waitlist() {
       } else {
         if (data.error === "username_taken") {
           setCheckState("taken");
-        } else if (data.error === "captcha_failed") {
-          setError("Verification failed. Please wait a moment and try again.");
         } else {
           setError("Something went wrong. Please try again.");
         }
@@ -158,7 +156,6 @@ export default function Waitlist() {
   // New visitor, needs to reserve username
   return (
     <div style={styles.page}>
-      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <div style={styles.card}>
         <StemMark />
         <h1 style={styles.heading}>Stem is invite-only.</h1>
@@ -192,8 +189,6 @@ export default function Waitlist() {
           <p style={{ ...styles.status, color: statusColor }}>{statusMsg || "\u00A0"}</p>
 
           {error && <p style={styles.error}>{error}</p>}
-
-          <div className="cf-turnstile" data-sitekey="0x4AAAAAACzDdtqFQgWP_8FO" data-theme="auto" data-size="normal" style={{ marginTop: 8 }} />
 
           <button
             style={{
