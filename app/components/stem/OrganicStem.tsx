@@ -204,6 +204,7 @@ export function OrganicStem({
         >
           <div
             ref={gridRef}
+            data-stem-grid
             style={{
               ...organicStyles.grid,
               gridTemplateColumns: isFocused ? "1fr 4px 1fr" : gridColumns,
@@ -454,19 +455,6 @@ function StemBranchItem({
       ? "1 / 3"   // left content + trunk
       : "2 / 4";  // trunk + right content
 
-  const dragProps = isOwner && drag
-    ? {
-        draggable: true,
-        onDragStart: drag.onDragStart({ id: item.id, type: item.type }),
-        onDragOver: drag.onDragOver(index),
-        onDrop: drag.onDrop(index),
-        onDragEnd: drag.onDragEnd,
-      }
-    : {};
-
-  const isDragging = drag?.dragItem?.id === item.id;
-  const isDragOver = drag?.dragOverIndex === index && drag?.isDragging && !isDragging;
-
   const content = item.type === "node"
     ? (() => {
         const node = nodesById.get(item.id);
@@ -508,16 +496,15 @@ function StemBranchItem({
 
   return (
     <div
-      {...dragProps}
+      data-drag-idx={index}
+      onPointerDown={isOwner && drag ? drag.handlePointerDown(index, item) : undefined}
       style={{
         ...organicStyles.branchItem,
         gridColumn,
         gridRow: index + 1,
         flexDirection: side === "left" && !isMobile ? "row-reverse" : "row",
-        opacity: isDragging ? 0.4 : 1,
-        transition: "opacity 0.15s",
-        borderTop: isDragOver ? "2px solid var(--forest)" : "2px solid transparent",
-        cursor: isOwner && drag ? (isDragging ? "grabbing" : "grab") : undefined,
+        cursor: isOwner && drag ? "grab" : undefined,
+        touchAction: isOwner ? "none" : undefined,
       }}
     >
       {/* Connector with junction dot */}
