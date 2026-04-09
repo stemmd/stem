@@ -531,19 +531,19 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     const emoji = (form.get("emoji") as string | null)?.trim() || null;
     const parentId = (form.get("parent_id") as string | null)?.trim() || null;
 
-    // Enforce 3-level nesting cap
+    // Enforce 10-level nesting cap
     if (parentId) {
       let depth = 0;
       let currentId: string | null = parentId;
-      while (currentId && depth < 5) {
+      while (currentId && depth < 12) {
         const parent = await db.prepare("SELECT parent_id, stem_id FROM nodes WHERE id = ?")
           .bind(currentId).first<{ parent_id: string | null; stem_id: string }>();
         if (!parent || parent.stem_id !== stem.id) break;
         currentId = parent.parent_id;
         depth++;
       }
-      if (depth >= 3) {
-        return json({ error: "Maximum nesting depth (3 levels) reached." }, { status: 400 });
+      if (depth >= 10) {
+        return json({ error: "Maximum nesting depth (10 levels) reached." }, { status: 400 });
       }
     }
 

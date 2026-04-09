@@ -108,8 +108,8 @@ export function NodeSection({
             />
           ))}
 
-          {/* Add sub-node (owner, depth < 3) */}
-          {isOwner && depth < 2 && (
+          {/* Add sub-node (owner, depth < 10) */}
+          {isOwner && depth < 9 && (
             <AddNodeForm stemId={stemId} parentId={node.id} />
           )}
 
