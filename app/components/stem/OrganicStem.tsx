@@ -517,6 +517,7 @@ function StemBranchItem({
         opacity: isDragging ? 0.4 : 1,
         transition: "opacity 0.15s",
         borderTop: isDragOver ? "2px solid var(--forest)" : "2px solid transparent",
+        cursor: isOwner && drag ? (isDragging ? "grabbing" : "grab") : undefined,
       }}
     >
       {/* Connector with junction dot */}

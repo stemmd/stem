@@ -124,6 +124,7 @@ export function ArtifactCard({
           <img
             src={`https://api.stem.md/files/${artifact.file_key}`}
             alt={artifact.title || "Uploaded image"}
+            draggable={false}
             style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8, display: "block" }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
@@ -163,6 +164,7 @@ export function ArtifactCard({
             href={`https://api.stem.md/files/${artifact.file_key}`}
             target="_blank"
             rel="noopener noreferrer"
+            draggable={false}
             style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "12px 0" }}
           >
             <span style={{ fontSize: 28, flexShrink: 0 }}>📄</span>
@@ -217,6 +219,7 @@ export function ArtifactCard({
         <img
           src={artifact.image_url}
           alt=""
+          draggable={false}
           style={styles.artifactThumb}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
@@ -226,6 +229,7 @@ export function ArtifactCard({
           href={artifact.url ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
+          draggable={false}
           style={styles.artifactTitle}
           onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
         >
@@ -244,7 +248,7 @@ export function ArtifactCard({
           </span>
           <span style={styles.artifactDomain}>
             {artifact.favicon_url && (
-              <img src={artifact.favicon_url} alt="" style={{ width: 12, height: 12, flexShrink: 0 }} />
+              <img src={artifact.favicon_url} alt="" draggable={false} style={{ width: 12, height: 12, flexShrink: 0 }} />
             )}
             {domain}
           </span>
