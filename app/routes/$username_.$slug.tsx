@@ -27,6 +27,7 @@ import { StemSettings } from "~/components/stem/StemSettings";
 import { PendingSuggestions } from "~/components/stem/PendingSuggestions";
 import { BranchMembersSection } from "~/components/stem/BranchMembers";
 import { OrganicStem } from "~/components/stem/OrganicStem";
+import { AddNodeForm } from "~/components/stem/AddNodeForm";
 import { StemHeader } from "~/components/stem/StemHeader";
 import { PendingNodeRow } from "~/components/stem/PendingNodeRow";
 
@@ -857,6 +858,12 @@ export default function StemPage() {
                 </a>
               </div>
             ))}
+          </div>
+        )}
+
+        {isOwner && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+            <AddNodeForm stemId={stem.id} parentId={null} />
           </div>
         )}
 

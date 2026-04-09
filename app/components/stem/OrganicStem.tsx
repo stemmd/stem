@@ -390,12 +390,6 @@ export function OrganicStem({
         )}
       </div>
 
-      {/* Owner: add node button below stem */}
-      {isOwner && !isFocused && (
-        <div style={{ maxWidth: 400, margin: "24px auto 0" }}>
-          <AddNodeForm stemId={stemId} parentId={null} />
-        </div>
-      )}
 
       {/* Add item popover */}
       {popoverPosition && !isFocused && (
