@@ -9,6 +9,7 @@ interface DragContextValue {
   targetIndex: number | null;
   dropNodeId: string | null;
   handlePointerDown: (index: number, item: DragItem) => (e: React.PointerEvent) => void;
+  handleArtifactDrag: (artifactId: string) => (e: React.PointerEvent) => void;
 }
 
 const Ctx = createContext<DragContextValue | null>(null);
@@ -324,9 +325,31 @@ export function DragProvider({
     [isOwner, onMove, onUp]
   );
 
+  // Lightweight drag for artifacts inside focused node view (node-drop only, no reorder)
+  const handleArtifactDrag = useCallback(
+    (artifactId: string) => (e: React.PointerEvent) => {
+      if (!isOwner || e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("a[href], input, textarea, form, iframe")) return;
+
+      // Reuse the same drag machinery with a fake index of -1 (skip reorder logic)
+      startPos.current = { x: e.clientX, y: e.clientY };
+      dragInfo.current = {
+        index: -1,
+        item: { id: artifactId, type: "artifact" },
+        el: e.currentTarget as HTMLElement,
+        startRect: e.currentTarget.getBoundingClientRect(),
+      };
+
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    },
+    [isOwner, onMove, onUp]
+  );
+
   const value = useMemo<DragContextValue>(
-    () => ({ dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown }),
-    [dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown]
+    () => ({ dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown, handleArtifactDrag }),
+    [dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown, handleArtifactDrag]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

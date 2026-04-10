@@ -323,66 +323,20 @@ export function OrganicStem({
                 }} />
               )}
 
-              {focusedNodeArtifacts.map((artifact, i) => (
-                <div
-                  key={artifact.id}
-                  style={{
-                    ...organicStyles.branchItem,
-                    gridColumn: i % 2 === 0 ? "2 / 4" : "1 / 3",
-                    gridRow: i + 1,
-                    flexDirection: i % 2 === 0 ? "row" : "row-reverse",
-                  }}
-                >
-                  <div style={{ ...organicStyles.connectorWrap, flexDirection: i % 2 === 0 ? "row" : "row-reverse" }}>
-                    <div style={organicStyles.junctionDot} />
-                    <div style={organicStyles.connector} />
-                  </div>
-                  <div style={organicStyles.cardWrapper}>
-                    <ArtifactCard
-                      artifact={artifact}
-                      stemId={stemId}
-                      stemUserId={stemUserId}
-                      currentUserId={currentUserId}
-                      stemUsername={stemUsername}
-                      nodeNames={
-                        (artifactToNodes.get(artifact.id)?.length ?? 0) > 1
-                          ? artifactToNodes.get(artifact.id)!
-                              .filter((nid) => nid !== focusedNodeId)
-                              .map((nid) => nodesById.get(nid)?.title ?? "")
-                              .filter(Boolean)
-                          : undefined
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
-
-              {/* Sub-nodes as clickable cards on the mini-trunk */}
-              {focusedNodeChildren.map((child, i) => {
-                const childArtifactCount = (nodeToArtifacts.get(child.id) || []).length;
-                const rowIdx = focusedNodeArtifacts.length + i + 1;
-                return (
-                  <div
-                    key={child.id}
-                    style={{
-                      ...organicStyles.branchItem,
-                      gridColumn: rowIdx % 2 === 0 ? "1 / 3" : "2 / 4",
-                      gridRow: rowIdx,
-                      flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row",
-                    }}
-                  >
-                    <div style={{ ...organicStyles.connectorWrap, flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row" }}>
-                      <div style={organicStyles.junctionDot} />
-                      <div style={organicStyles.connector} />
-                    </div>
-                    <NodeCard
-                      node={child}
-                      artifactCount={childArtifactCount}
-                      onClick={() => focusNode(child.id)}
-                    />
-                  </div>
-                );
-              })}
+              <FocusedNodeItems
+                artifacts={focusedNodeArtifacts}
+                children={focusedNodeChildren}
+                stemId={stemId}
+                stemUserId={stemUserId}
+                currentUserId={currentUserId}
+                stemUsername={stemUsername}
+                focusedNodeId={focusedNodeId}
+                artifactToNodes={artifactToNodes}
+                nodeToArtifacts={nodeToArtifacts}
+                nodesById={nodesById}
+                isOwner={isOwner}
+                onNodeClick={focusNode}
+              />
             </div>
 
             {focusedNodeArtifacts.length === 0 && focusedNodeChildren.length === 0 && !canContribute && (
@@ -435,6 +389,108 @@ export function OrganicStem({
   );
 }
 
+/** Items inside a focused node — artifacts are draggable onto sub-node cards */
+function FocusedNodeItems({
+  artifacts,
+  children: childNodes,
+  stemId,
+  stemUserId,
+  currentUserId,
+  stemUsername,
+  focusedNodeId,
+  artifactToNodes,
+  nodeToArtifacts,
+  nodesById,
+  isOwner,
+  onNodeClick,
+}: {
+  artifacts: Artifact[];
+  children: Node[];
+  stemId: string;
+  stemUserId: string;
+  currentUserId: string | undefined;
+  stemUsername: string;
+  focusedNodeId: string | null;
+  artifactToNodes: Map<string, string[]>;
+  nodeToArtifacts: Map<string, string[]>;
+  nodesById: Map<string, Node>;
+  isOwner: boolean;
+  onNodeClick: (nodeId: string) => void;
+}) {
+  const drag = useDragContext();
+  const isDraggingArtifact = drag?.dragType === "artifact";
+
+  return (
+    <>
+      {artifacts.map((artifact, i) => (
+        <div
+          key={artifact.id}
+          onPointerDown={isOwner && drag ? drag.handleArtifactDrag(artifact.id) : undefined}
+          style={{
+            ...organicStyles.branchItem,
+            gridColumn: i % 2 === 0 ? "2 / 4" : "1 / 3",
+            gridRow: i + 1,
+            flexDirection: i % 2 === 0 ? "row" : "row-reverse",
+            cursor: isOwner ? "grab" : undefined,
+            touchAction: isOwner ? "none" : undefined,
+          }}
+        >
+          <div style={{ ...organicStyles.connectorWrap, flexDirection: i % 2 === 0 ? "row" : "row-reverse" }}>
+            <div style={organicStyles.junctionDot} />
+            <div style={organicStyles.connector} />
+          </div>
+          <div style={organicStyles.cardWrapper}>
+            <ArtifactCard
+              artifact={artifact}
+              stemId={stemId}
+              stemUserId={stemUserId}
+              currentUserId={currentUserId}
+              stemUsername={stemUsername}
+              nodeNames={
+                (artifactToNodes.get(artifact.id)?.length ?? 0) > 1
+                  ? artifactToNodes.get(artifact.id)!
+                      .filter((nid) => nid !== focusedNodeId)
+                      .map((nid) => nodesById.get(nid)?.title ?? "")
+                      .filter(Boolean)
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      ))}
+
+      {childNodes.map((child, i) => {
+        const childArtifactCount = (nodeToArtifacts.get(child.id) || []).length;
+        const rowIdx = artifacts.length + i + 1;
+        return (
+          <div
+            key={child.id}
+            style={{
+              ...organicStyles.branchItem,
+              gridColumn: rowIdx % 2 === 0 ? "1 / 3" : "2 / 4",
+              gridRow: rowIdx,
+              flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row",
+            }}
+          >
+            <div style={{ ...organicStyles.connectorWrap, flexDirection: rowIdx % 2 === 0 ? "row-reverse" : "row" }}>
+              <div style={organicStyles.junctionDot} />
+              <div style={organicStyles.connector} />
+            </div>
+            <div data-node-drop={child.id} style={{ flex: 1, minWidth: 0, maxWidth: 380, transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
+              <NodeCard
+                node={child}
+                artifactCount={childArtifactCount}
+                onClick={() => onNodeClick(child.id)}
+                dropHint={isDraggingArtifact}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function StemBranchItem({
   item,
   index,
@@ -483,7 +539,7 @@ function StemBranchItem({
         if (!node) return null;
         const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
         return (
-          <div data-node-drop={node.id} style={{ transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
+          <div data-node-drop={node.id} style={{ flex: 1, minWidth: 0, maxWidth: 380, transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
             <NodeCard
               node={node}
               artifactCount={artifactCount}
