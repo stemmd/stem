@@ -52,6 +52,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <style>{`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+          .hide-scrollbar::-webkit-scrollbar { display: none; }
+
           :root {
             --ink:         #1C1A17;
             --ink-mid:     #5C5850;

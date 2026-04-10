@@ -3,7 +3,7 @@ import type { Node, Artifact } from "./types";
 import { StemColumn, type ColumnItem } from "./StemColumn";
 import { ArtifactDetailPanel } from "./ArtifactDetailPanel";
 import { MobileBreadcrumb } from "./MobileBreadcrumb";
-import { NodeRow, ArtifactRow } from "./ColumnRow";
+import { StemOverviewStrip } from "./StemOverviewStrip";
 import { useMediaQuery } from "~/lib/hooks";
 
 export function ColumnBrowser({
@@ -193,25 +193,72 @@ export function ColumnBrowser({
 
   // ── Desktop ──────────────────────────────────────────────────
   //
-  // Three states:
-  // 1. Root overview (no node selected, no artifact open)
+  // Persistent overview strip at top, column browser below.
+  // Three states for the area below the strip:
+  // 1. Landing (no node selected, no artifact open) — stats summary
   // 2. Browsing nodes (sidebar + active column)
   // 3. Viewing artifact (sidebar + full-tab artifact viewer)
 
+  const rootItems = getColumnItems(null);
   const isAtRoot = openPath.length === 0;
   const parentColumn = isAtRoot ? null : columns[columns.length - 2] || null;
   const activeColumn = columns[columns.length - 1];
   const activeColumnIndex = columns.length - 1;
   const parentColumnIndex = columns.length - 2;
 
-  // ── State 3: Artifact viewer takes over ──────────────────────
+  // The active root-level node is the first item in openPath (if any)
+  const activeRootNodeId = openPath.length > 0 ? openPath[0] : null;
+
+  // Handle node clicks from the strip — always navigates to root level
+  const handleStripNodeClick = useCallback((nodeId: string) => {
+    if (openPath[0] === nodeId && openPath.length === 1 && !selectedArtifactId) {
+      // Toggle off: clicking the same root node deselects
+      setOpenPath([]);
+      setSelectedArtifactId(null);
+    } else {
+      setOpenPath([nodeId]);
+      setSelectedArtifactId(null);
+    }
+  }, [openPath, selectedArtifactId]);
+
+  // Handle artifact clicks from the strip
+  const handleStripArtifactClick = useCallback((artifactId: string) => {
+    if (selectedArtifactId === artifactId && openPath.length === 0) {
+      // Toggle off
+      setSelectedArtifactId(null);
+    } else {
+      setOpenPath([]);
+      setSelectedArtifactId((prev) => (prev === artifactId ? null : artifactId));
+    }
+  }, [selectedArtifactId, openPath]);
+
+  // Determine which root artifact is active in the strip
+  // (only highlight if we're at root level viewing it)
+  const stripActiveArtifactId =
+    isAtRoot && selectedArtifactId ? selectedArtifactId : null;
+
+  const strip = (
+    <StemOverviewStrip
+      items={rootItems}
+      nodesById={nodesById}
+      artifactsById={artifactsById}
+      childNodesMap={childNodesMap}
+      nodeToArtifacts={nodeToArtifacts}
+      activeNodeId={activeRootNodeId}
+      activeArtifactId={stripActiveArtifactId}
+      onNodeClick={handleStripNodeClick}
+      onArtifactClick={handleStripArtifactClick}
+    />
+  );
+
+  // ── State 3: Artifact viewer ─────────────────────────────────
   if (selectedArtifact) {
-    // Sidebar shows the current column (where the artifact was clicked)
     const sidebarColumn = activeColumn;
     const sidebarColumnIndex = activeColumnIndex;
 
     return (
       <div style={bStyles.wrapper}>
+        {strip}
         {openPath.length > 0 && (
           <div style={bStyles.breadcrumbBar}>
             <MobileBreadcrumb breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNav} />
@@ -252,14 +299,12 @@ export function ColumnBrowser({
     );
   }
 
-  // ── State 1: Root overview ───────────────────────────────────
+  // ── State 1: Landing (strip + stats) ─────────────────────────
   if (isAtRoot) {
-    const rootItems = getColumnItems(null);
-
     return (
       <div style={bStyles.wrapper}>
-        <div style={bStyles.rootOverview}>
-          {/* Stats */}
+        {strip}
+        <div style={bStyles.landing}>
           <div style={bStyles.rootStats}>
             {totalNodes > 0 && (
               <span style={bStyles.rootStat}>
@@ -272,49 +317,6 @@ export function ColumnBrowser({
               <span style={bStyles.rootStatLabel}>{totalArtifacts === 1 ? "artifact" : "artifacts"}</span>
             </span>
           </div>
-
-          {/* All items in position order — creator's intended sequence */}
-          <div style={bStyles.rootItems}>
-            {rootItems.map((item) => {
-              if (item.type === "node") {
-                const node = nodesById.get(item.id);
-                if (!node) return null;
-                const children = childNodesMap.get(node.id) || [];
-                const artifactIds = nodeToArtifacts.get(node.id) || [];
-                const count = children.length + artifactIds.length;
-                return (
-                  <button
-                    key={node.id}
-                    onClick={() => handleNodeClick(node.id, 0)}
-                    style={bStyles.rootNodeCard}
-                  >
-                    <span style={bStyles.rootNodeEmoji}>{node.emoji || "\uD83D\uDCC1"}</span>
-                    <div style={bStyles.rootNodeInfo}>
-                      <span style={bStyles.rootNodeTitle}>{node.title}</span>
-                      {node.description && (
-                        <span style={bStyles.rootNodeDesc}>{node.description}</span>
-                      )}
-                    </div>
-                    <span style={bStyles.rootNodeCount}>
-                      {count} {"\u203A"}
-                    </span>
-                  </button>
-                );
-              }
-
-              const artifact = artifactsById.get(item.id);
-              if (!artifact) return null;
-              return (
-                <ArtifactRow
-                  key={item.id}
-                  artifact={artifact}
-                  isSelected={false}
-                  onClick={() => handleArtifactClick(artifact.id)}
-                />
-              );
-            })}
-          </div>
-
           {rootItems.length === 0 && (
             <p style={bStyles.rootEmpty}>
               {isOwner ? "Your stem is empty \u2014 add nodes or artifacts with the + button" : "Nothing here yet"}
@@ -325,9 +327,10 @@ export function ColumnBrowser({
     );
   }
 
-  // ── State 2: Browsing nodes (sidebar + active column) ────────
+  // ── State 2: Browsing nodes (strip + sidebar + active column) ─
   return (
     <div style={bStyles.wrapper}>
+      {strip}
       {openPath.length > 0 && (
         <div style={bStyles.breadcrumbBar}>
           <MobileBreadcrumb breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNav} />
@@ -410,16 +413,18 @@ const bStyles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
   },
 
-  // ── Root overview ────────────────────────────────────────────
-  rootOverview: {
+  // ── Landing (below strip) ─────────────────────────────────────
+  landing: {
     flex: 1,
-    overflowY: "auto" as const,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
     padding: "40px 48px",
   },
   rootStats: {
     display: "flex",
     gap: 32,
-    marginBottom: 36,
   },
   rootStat: {
     display: "flex",
@@ -437,62 +442,12 @@ const bStyles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     color: "var(--ink-light)",
   },
-  rootItems: {
-    display: "flex",
-    flexDirection: "column" as const,
-  },
-  rootNodeCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-    width: "100%",
-    padding: "18px 24px",
-    background: "var(--paper)",
-    border: "none",
-    borderBottom: "1px solid var(--paper-dark)",
-    borderRadius: 0,
-    cursor: "pointer",
-    textAlign: "left" as const,
-    transition: "background 0.12s",
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  rootNodeEmoji: {
-    fontSize: 22,
-    flexShrink: 0,
-  },
-  rootNodeInfo: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 2,
-  },
-  rootNodeTitle: {
-    fontWeight: 600,
-    fontSize: 16,
-    color: "var(--ink)",
-    lineHeight: 1.3,
-  },
-  rootNodeDesc: {
-    fontSize: 13,
-    color: "var(--ink-mid)",
-    lineHeight: 1.4,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap" as const,
-  },
-  rootNodeCount: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 14,
-    color: "var(--ink-light)",
-    flexShrink: 0,
-  },
   rootEmpty: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 15,
     color: "var(--ink-light)",
     textAlign: "center" as const,
-    padding: "80px 20px",
+    padding: "40px 20px",
   },
 
   // ── Mobile ───────────────────────────────────────────────────
