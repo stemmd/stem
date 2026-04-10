@@ -692,6 +692,9 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     const artifactId = form.get("artifactId") as string;
     const nodeId = form.get("nodeId") as string;
 
+    // Move (not tag): remove all existing node assignments, then assign to the new node
+    await db.prepare("DELETE FROM artifact_nodes WHERE artifact_id = ?").bind(artifactId).run();
+
     const lastPos = await db.prepare(
       "SELECT MAX(position) as maxPos FROM artifact_nodes WHERE node_id = ?"
     ).bind(nodeId).first<{ maxPos: number | null }>();
@@ -699,7 +702,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
     const id = `an_${nanoid(10)}`;
     await db.prepare(
-      "INSERT OR IGNORE INTO artifact_nodes (id, artifact_id, node_id, position) VALUES (?, ?, ?, ?)"
+      "INSERT INTO artifact_nodes (id, artifact_id, node_id, position) VALUES (?, ?, ?, ?)"
     ).bind(id, artifactId, nodeId, position).run();
     return json({ success: true });
   }

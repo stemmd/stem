@@ -418,7 +418,6 @@ function FocusedNodeItems({
   onNodeClick: (nodeId: string) => void;
 }) {
   const drag = useDragContext();
-  const isDraggingArtifact = drag?.dragType === "artifact";
 
   return (
     <>
@@ -481,7 +480,6 @@ function FocusedNodeItems({
                 node={child}
                 artifactCount={childArtifactCount}
                 onClick={() => onNodeClick(child.id)}
-                dropHint={isDraggingArtifact}
               />
             </div>
           </div>
@@ -531,8 +529,6 @@ function StemBranchItem({
       ? "1 / 3"   // left content + trunk
       : "2 / 4";  // trunk + right content
 
-  const isArtifactDrag = drag?.dragType === "artifact" && drag.dragIndex !== null;
-
   const content = item.type === "node"
     ? (() => {
         const node = nodesById.get(item.id);
@@ -544,7 +540,6 @@ function StemBranchItem({
               node={node}
               artifactCount={artifactCount}
               onClick={() => onNodeClick(node.id, side)}
-              dropHint={isArtifactDrag}
             />
           </div>
         );
