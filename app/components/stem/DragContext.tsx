@@ -5,7 +5,9 @@ interface DragItem { id: string; type: "node" | "artifact" }
 
 interface DragContextValue {
   dragIndex: number | null;
+  dragType: "node" | "artifact" | null;
   targetIndex: number | null;
+  dropNodeId: string | null;
   handlePointerDown: (index: number, item: DragItem) => (e: React.PointerEvent) => void;
 }
 
@@ -24,7 +26,9 @@ export function DragProvider({
   children: React.ReactNode;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragType, setDragType] = useState<"node" | "artifact" | null>(null);
   const [targetIndex, setTargetIndex] = useState<number | null>(null);
+  const [dropNodeId, setDropNodeId] = useState<string | null>(null);
 
   const fetcher = useFetcher();
   const itemsRef = useRef(items);
@@ -38,8 +42,19 @@ export function DragProvider({
   const indicatorEl = useRef<HTMLElement | null>(null);
   const isActive = useRef(false);
   const currentTarget = useRef<number | null>(null);
+  const currentDropNode = useRef<string | null>(null);
   const mids = useRef<number[]>([]);
   const gridBox = useRef<DOMRect | null>(null);
+  const lastHighlight = useRef<HTMLElement | null>(null);
+
+  const clearNodeHighlight = useCallback(() => {
+    if (lastHighlight.current) {
+      lastHighlight.current.style.boxShadow = "";
+      lastHighlight.current.style.outline = "";
+      lastHighlight.current.style.outlineOffset = "";
+      lastHighlight.current = null;
+    }
+  }, []);
 
   const cleanup = useCallback(() => {
     if (overlay.current) {
@@ -60,14 +75,18 @@ export function DragProvider({
       el.style.transition = "opacity 0.2s ease";
       el.style.opacity = "";
     }
+    clearNodeHighlight();
     dragInfo.current = null;
     isActive.current = false;
     currentTarget.current = null;
+    currentDropNode.current = null;
     setDragIndex(null);
+    setDragType(null);
     setTargetIndex(null);
+    setDropNodeId(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-  }, []);
+  }, [clearNodeHighlight]);
 
   const onMove = useCallback((e: PointerEvent) => {
     const info = dragInfo.current;
@@ -97,6 +116,7 @@ export function DragProvider({
       // Create floating clone
       const clone = info.el.cloneNode(true) as HTMLElement;
       clone.removeAttribute("data-drag-idx");
+      clone.removeAttribute("data-node-drop");
       Object.assign(clone.style, {
         position: "fixed",
         left: `${info.startRect.left}px`,
@@ -141,6 +161,7 @@ export function DragProvider({
       document.body.style.userSelect = "none";
 
       setDragIndex(info.index);
+      setDragType(info.item.type);
     }
 
     // Move overlay (no transition for immediate cursor tracking)
@@ -149,7 +170,36 @@ export function DragProvider({
       overlay.current.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
     }
 
-    // Compute insertion index from cursor Y
+    // Check if hovering over a node card (artifact → node drop)
+    if (info.item.type === "artifact") {
+      const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+      const nodeDropEl = elUnder?.closest<HTMLElement>("[data-node-drop]");
+      const nodeId = nodeDropEl?.getAttribute("data-node-drop") || null;
+
+      if (nodeId !== currentDropNode.current) {
+        currentDropNode.current = nodeId;
+        setDropNodeId(nodeId);
+
+        // Visual highlight on the node card
+        clearNodeHighlight();
+        if (nodeId && nodeDropEl) {
+          nodeDropEl.style.outline = "2px solid var(--forest, #2D5A3D)";
+          nodeDropEl.style.outlineOffset = "2px";
+          nodeDropEl.style.boxShadow = "0 0 16px rgba(45, 90, 61, 0.25)";
+          lastHighlight.current = nodeDropEl;
+        }
+
+        // Hide reorder indicator when over a node
+        if (nodeId && indicatorEl.current) {
+          indicatorEl.current.style.opacity = "0";
+        }
+      }
+
+      // If hovering over a node, skip reorder logic
+      if (nodeId) return;
+    }
+
+    // Compute insertion index from cursor Y (reorder mode)
     const m = mids.current;
     let target = 0;
     for (let i = 0; i < m.length; i++) {
@@ -188,7 +238,7 @@ export function DragProvider({
         }
       }
     }
-  }, []);
+  }, [clearNodeHighlight]);
 
   const onUp = useCallback(() => {
     document.removeEventListener("pointermove", onMove);
@@ -200,6 +250,29 @@ export function DragProvider({
       return;
     }
 
+    const nodeTarget = currentDropNode.current;
+
+    // Drop artifact onto a node → assign to node
+    if (nodeTarget && info.item.type === "artifact") {
+      fetcher.submit(
+        {
+          intent: "assign_artifact_node",
+          artifactId: info.item.id,
+          nodeId: nodeTarget,
+        },
+        { method: "post" }
+      );
+
+      document.addEventListener(
+        "click",
+        (ev) => { ev.stopPropagation(); ev.preventDefault(); },
+        { capture: true, once: true }
+      );
+      cleanup();
+      return;
+    }
+
+    // Regular reorder
     const from = info.index;
     const to = currentTarget.current ?? from;
     const isNoOp = to === from || to === from + 1;
@@ -252,8 +325,8 @@ export function DragProvider({
   );
 
   const value = useMemo<DragContextValue>(
-    () => ({ dragIndex, targetIndex, handlePointerDown }),
-    [dragIndex, targetIndex, handlePointerDown]
+    () => ({ dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown }),
+    [dragIndex, dragType, targetIndex, dropNodeId, handlePointerDown]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

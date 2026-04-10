@@ -8,15 +8,20 @@ export function NodeCard({
   node,
   artifactCount,
   onClick,
+  dropHint,
 }: {
   node: Node;
   artifactCount: number;
   onClick: () => void;
+  dropHint?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      style={nodeCardStyles.card}
+      style={{
+        ...nodeCardStyles.card,
+        ...(dropHint ? nodeCardStyles.dropHint : undefined),
+      }}
       title={`Explore ${node.title}`}
     >
       <div style={nodeCardStyles.header}>
@@ -27,7 +32,11 @@ export function NodeCard({
         <span style={nodeCardStyles.count}>
           {artifactCount} {artifactCount === 1 ? "artifact" : "artifacts"}
         </span>
-        <span style={nodeCardStyles.arrow}>{"\u2192"}</span>
+        {dropHint ? (
+          <span style={nodeCardStyles.dropLabel}>drop to add</span>
+        ) : (
+          <span style={nodeCardStyles.arrow}>{"\u2192"}</span>
+        )}
       </div>
     </button>
   );
@@ -47,8 +56,12 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     cursor: "pointer",
     textAlign: "left",
-    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+    transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
     fontFamily: "'DM Sans', sans-serif",
+  },
+  dropHint: {
+    borderColor: "var(--forest)",
+    borderStyle: "dashed",
   },
   header: {
     display: "flex",
@@ -83,5 +96,11 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     color: "var(--forest)",
     opacity: 0.6,
+  },
+  dropLabel: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 11,
+    color: "var(--forest)",
+    opacity: 0.7,
   },
 };

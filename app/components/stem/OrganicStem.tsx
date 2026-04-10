@@ -475,17 +475,22 @@ function StemBranchItem({
       ? "1 / 3"   // left content + trunk
       : "2 / 4";  // trunk + right content
 
+  const isArtifactDrag = drag?.dragType === "artifact" && drag.dragIndex !== null;
+
   const content = item.type === "node"
     ? (() => {
         const node = nodesById.get(item.id);
         if (!node) return null;
         const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
         return (
-          <NodeCard
-            node={node}
-            artifactCount={artifactCount}
-            onClick={() => onNodeClick(node.id, side)}
-          />
+          <div data-node-drop={node.id} style={{ transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
+            <NodeCard
+              node={node}
+              artifactCount={artifactCount}
+              onClick={() => onNodeClick(node.id, side)}
+              dropHint={isArtifactDrag}
+            />
+          </div>
         );
       })()
     : (() => {
