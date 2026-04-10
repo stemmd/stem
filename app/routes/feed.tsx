@@ -216,37 +216,32 @@ export default function Feed() {
                 <div style={styles.periodDivider} />
 
                 {tp.stemGroups.map((group) => (
-                  <div
+                  <Link
                     key={group.key}
-                    style={{ ...styles.group, background: getCategoryTint(group.stemCategory) }}
+                    to={`/${group.stemUsername}/${group.stemSlug}`}
+                    style={{ ...styles.group, background: getCategoryTint(group.stemCategory), textDecoration: "none", display: "block" }}
                   >
                     <div style={styles.groupHeader}>
-                      <Link
-                        to={`/${group.stemUsername}/${group.stemSlug}`}
-                        style={styles.groupStemLink}
-                      >
+                      <span style={styles.groupStemLink}>
                         {group.stemEmoji && <span style={styles.groupEmoji}>{group.stemEmoji}</span>}
                         {group.stemTitle}
-                      </Link>
+                      </span>
                       <span style={styles.groupMeta}>
                         · @{group.stemUsername}
                       </span>
                     </div>
                     <div style={styles.artifactList}>
                       {group.artifacts.map((artifact) => (
-                        <a
+                        <div
                           key={artifact.id}
-                          href={artifact.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           style={styles.artifactRow}
                         >
                           <span style={styles.artifactRowTitle}>{artifact.title || artifact.url}</span>
-                          <span style={styles.artifactRowDomain}>{getDomain(artifact.url)}</span>
-                        </a>
+                          {artifact.url && <span style={styles.artifactRowDomain}>{getDomain(artifact.url)}</span>}
+                        </div>
                       ))}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ))}
