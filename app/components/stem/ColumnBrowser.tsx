@@ -255,8 +255,6 @@ export function ColumnBrowser({
   // ── State 1: Root overview ───────────────────────────────────
   if (isAtRoot) {
     const rootItems = getColumnItems(null);
-    const nodeItems = rootItems.filter((i) => i.type === "node");
-    const artifactItems = rootItems.filter((i) => i.type === "artifact");
 
     return (
       <div style={bStyles.wrapper}>
@@ -275,10 +273,10 @@ export function ColumnBrowser({
             </span>
           </div>
 
-          {/* Nodes as cards */}
-          {nodeItems.length > 0 && (
-            <div style={bStyles.rootNodeGrid}>
-              {nodeItems.map((item) => {
+          {/* All items in position order — creator's intended sequence */}
+          <div style={bStyles.rootItems}>
+            {rootItems.map((item) => {
+              if (item.type === "node") {
                 const node = nodesById.get(item.id);
                 if (!node) return null;
                 const children = childNodesMap.get(node.id) || [];
@@ -291,41 +289,31 @@ export function ColumnBrowser({
                     style={bStyles.rootNodeCard}
                   >
                     <span style={bStyles.rootNodeEmoji}>{node.emoji || "\uD83D\uDCC1"}</span>
-                    <span style={bStyles.rootNodeTitle}>{node.title}</span>
-                    {node.description && (
-                      <span style={bStyles.rootNodeDesc}>{node.description}</span>
-                    )}
+                    <div style={bStyles.rootNodeInfo}>
+                      <span style={bStyles.rootNodeTitle}>{node.title}</span>
+                      {node.description && (
+                        <span style={bStyles.rootNodeDesc}>{node.description}</span>
+                      )}
+                    </div>
                     <span style={bStyles.rootNodeCount}>
-                      {count} {count === 1 ? "item" : "items"} {"\u203A"}
+                      {count} {"\u203A"}
                     </span>
                   </button>
                 );
-              })}
-            </div>
-          )}
+              }
 
-          {/* Root artifacts below */}
-          {artifactItems.length > 0 && (
-            <div style={bStyles.rootArtifacts}>
-              {nodeItems.length > 0 && (
-                <p style={bStyles.rootArtifactsLabel}>
-                  {artifactItems.length} {artifactItems.length === 1 ? "artifact" : "artifacts"} at root
-                </p>
-              )}
-              {artifactItems.map((item) => {
-                const artifact = artifactsById.get(item.id);
-                if (!artifact) return null;
-                return (
-                  <ArtifactRow
-                    key={item.id}
-                    artifact={artifact}
-                    isSelected={false}
-                    onClick={() => handleArtifactClick(artifact.id)}
-                  />
-                );
-              })}
-            </div>
-          )}
+              const artifact = artifactsById.get(item.id);
+              if (!artifact) return null;
+              return (
+                <ArtifactRow
+                  key={item.id}
+                  artifact={artifact}
+                  isSelected={false}
+                  onClick={() => handleArtifactClick(artifact.id)}
+                />
+              );
+            })}
+          </div>
 
           {rootItems.length === 0 && (
             <p style={bStyles.rootEmpty}>
@@ -449,28 +437,35 @@ const bStyles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     color: "var(--ink-light)",
   },
-  rootNodeGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: 16,
-    marginBottom: 40,
+  rootItems: {
+    display: "flex",
+    flexDirection: "column" as const,
   },
   rootNodeCard: {
     display: "flex",
-    flexDirection: "column" as const,
-    gap: 6,
-    padding: "20px 24px",
+    alignItems: "center",
+    gap: 16,
+    width: "100%",
+    padding: "18px 24px",
     background: "var(--paper)",
-    border: "1px solid var(--paper-dark)",
-    borderRadius: 14,
+    border: "none",
+    borderBottom: "1px solid var(--paper-dark)",
+    borderRadius: 0,
     cursor: "pointer",
     textAlign: "left" as const,
-    transition: "border-color 0.15s, box-shadow 0.15s",
+    transition: "background 0.12s",
     fontFamily: "'DM Sans', sans-serif",
   },
   rootNodeEmoji: {
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 22,
+    flexShrink: 0,
+  },
+  rootNodeInfo: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 2,
   },
   rootNodeTitle: {
     fontWeight: 600,
@@ -482,29 +477,15 @@ const bStyles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: "var(--ink-mid)",
     lineHeight: 1.4,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical" as const,
     overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
   },
   rootNodeCount: {
     fontFamily: "'DM Mono', monospace",
-    fontSize: 12,
+    fontSize: 14,
     color: "var(--ink-light)",
-    marginTop: 4,
-  },
-  rootArtifacts: {
-    borderTop: "1px solid var(--paper-dark)",
-    paddingTop: 24,
-  },
-  rootArtifactsLabel: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 12,
-    color: "var(--ink-light)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-    margin: 0,
-    marginBottom: 12,
+    flexShrink: 0,
   },
   rootEmpty: {
     fontFamily: "'DM Sans', sans-serif",
