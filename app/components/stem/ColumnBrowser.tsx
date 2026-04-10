@@ -1,8 +1,9 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import type { Node, Artifact } from "./types";
 import { StemColumn, type ColumnItem } from "./StemColumn";
 import { ArtifactDetailPanel } from "./ArtifactDetailPanel";
 import { MobileBreadcrumb } from "./MobileBreadcrumb";
+import { NodeRow, ArtifactRow } from "./ColumnRow";
 import { useMediaQuery } from "~/lib/hooks";
 
 export function ColumnBrowser({
@@ -47,21 +48,15 @@ export function ColumnBrowser({
     [approvedNodes]
   );
 
-  // Build column items for a given parent (null = root)
   const getColumnItems = useCallback(
     (parentNodeId: string | null): ColumnItem[] => {
       const items: ColumnItem[] = [];
-
       if (parentNodeId === null) {
         for (const node of rootNodes) {
           items.push({ id: node.id, type: "node", position: node.position });
         }
         for (const artifact of rootArtifacts) {
-          items.push({
-            id: artifact.id,
-            type: "artifact",
-            position: artifact.stem_position ?? 999999,
-          });
+          items.push({ id: artifact.id, type: "artifact", position: artifact.stem_position ?? 999999 });
         }
       } else {
         const children = childNodesMap.get(parentNodeId) || [];
@@ -72,22 +67,16 @@ export function ColumnBrowser({
         for (const [i, aid] of artifactIds.entries()) {
           const artifact = artifactsById.get(aid);
           if (artifact) {
-            items.push({
-              id: aid,
-              type: "artifact",
-              position: artifact.stem_position ?? 1000 + i,
-            });
+            items.push({ id: aid, type: "artifact", position: artifact.stem_position ?? 1000 + i });
           }
         }
       }
-
       items.sort((a, b) => a.position - b.position);
       return items;
     },
     [rootNodes, rootArtifacts, childNodesMap, nodeToArtifacts, artifactsById]
   );
 
-  // All columns: root + one per openPath entry
   const columns = useMemo(() => {
     const cols: { nodeId: string | null; node: Node | null; items: ColumnItem[] }[] = [];
     cols.push({ nodeId: null, node: null, items: getColumnItems(null) });
@@ -98,30 +87,24 @@ export function ColumnBrowser({
     return cols;
   }, [openPath, getColumnItems, nodesById]);
 
-  const handleNodeClick = useCallback(
-    (nodeId: string, columnIndex: number) => {
-      setSelectedArtifactId(null);
-      setOpenPath((prev) => {
-        const newPath = prev.slice(0, columnIndex);
-        newPath.push(nodeId);
-        return newPath;
-      });
-    },
-    []
-  );
+  const handleNodeClick = useCallback((nodeId: string, columnIndex: number) => {
+    setSelectedArtifactId(null);
+    setOpenPath((prev) => {
+      const newPath = prev.slice(0, columnIndex);
+      newPath.push(nodeId);
+      return newPath;
+    });
+  }, []);
 
-  const handleArtifactClick = useCallback(
-    (artifactId: string) => {
-      setSelectedArtifactId((prev) => (prev === artifactId ? null : artifactId));
-    },
-    []
-  );
+  const handleArtifactClick = useCallback((artifactId: string) => {
+    setSelectedArtifactId((prev) => (prev === artifactId ? null : artifactId));
+  }, []);
 
   const handleCloseDetail = useCallback(() => {
     setSelectedArtifactId(null);
   }, []);
 
-  // Initialize from URL hash
+  // URL hash sync
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
@@ -140,7 +123,6 @@ export function ColumnBrowser({
     }
   }, [nodesById]);
 
-  // Update URL hash on navigation
   useEffect(() => {
     if (typeof window === "undefined") return;
     const lastNode = openPath.length > 0 ? openPath[openPath.length - 1] : null;
@@ -151,11 +133,8 @@ export function ColumnBrowser({
     }
   }, [openPath]);
 
-  const selectedArtifact = selectedArtifactId
-    ? artifactsById.get(selectedArtifactId) ?? null
-    : null;
+  const selectedArtifact = selectedArtifactId ? artifactsById.get(selectedArtifactId) ?? null : null;
 
-  // Breadcrumb path (used by both mobile and desktop)
   const breadcrumbs = useMemo(() => {
     return openPath.map((id) => {
       const node = nodesById.get(id);
@@ -168,20 +147,20 @@ export function ColumnBrowser({
     setSelectedArtifactId(null);
   }, []);
 
-  // ── Mobile: single-column drill-down ─────────────────────────────
+  // ── Stats for root overview ──────────────────────────────────
+  const totalArtifacts = artifactsById.size;
+  const totalNodes = approvedNodes.length;
+
+  // ── Mobile ───────────────────────────────────────────────────
 
   if (isMobile) {
     const currentColumnIndex = openPath.length;
     const currentColumn = columns[currentColumnIndex] || columns[columns.length - 1];
-    const selectedNodeInColumn =
-      currentColumnIndex < openPath.length ? openPath[currentColumnIndex] : null;
+    const selectedNodeInColumn = currentColumnIndex < openPath.length ? openPath[currentColumnIndex] : null;
 
     return (
-      <div style={browserStyles.mobileWrapper}>
-        <MobileBreadcrumb
-          breadcrumbs={breadcrumbs}
-          onNavigate={handleBreadcrumbNav}
-        />
+      <div style={bStyles.mobileWrapper}>
+        <MobileBreadcrumb breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNav} />
         {selectedArtifact ? (
           <ArtifactDetailPanel
             artifact={selectedArtifact}
@@ -212,16 +191,12 @@ export function ColumnBrowser({
     );
   }
 
-  // ── Desktop: sidebar + main column + detail panel ────────────────
+  // ── Desktop ──────────────────────────────────────────────────
   //
-  // Layout:
-  //   - If at root (no node selected): single full-width column
-  //   - If navigated deeper: narrow parent sidebar on the left,
-  //     active column fills the remaining width
-  //   - If an artifact is selected: detail panel takes the right half
-  //
-  // The key idea: only 2 columns visible max (parent + active).
-  // Breadcrumbs handle the rest of the path.
+  // Three states:
+  // 1. Root overview (no node selected, no artifact open)
+  // 2. Browsing nodes (sidebar + active column)
+  // 3. Viewing artifact (sidebar + full-tab artifact viewer)
 
   const isAtRoot = openPath.length === 0;
   const parentColumn = isAtRoot ? null : columns[columns.length - 2] || null;
@@ -229,22 +204,150 @@ export function ColumnBrowser({
   const activeColumnIndex = columns.length - 1;
   const parentColumnIndex = columns.length - 2;
 
+  // ── State 3: Artifact viewer takes over ──────────────────────
+  if (selectedArtifact) {
+    // Sidebar shows the current column (where the artifact was clicked)
+    const sidebarColumn = activeColumn;
+    const sidebarColumnIndex = activeColumnIndex;
+
+    return (
+      <div style={bStyles.wrapper}>
+        {openPath.length > 0 && (
+          <div style={bStyles.breadcrumbBar}>
+            <MobileBreadcrumb breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNav} />
+          </div>
+        )}
+        <div style={bStyles.body}>
+          {/* Sidebar: shows the list where the artifact lives */}
+          <div style={bStyles.sidebar}>
+            <StemColumn
+              columnNode={sidebarColumn.node}
+              items={sidebarColumn.items}
+              nodesById={nodesById}
+              artifactsById={artifactsById}
+              childNodesMap={childNodesMap}
+              nodeToArtifacts={nodeToArtifacts}
+              selectedNodeId={null}
+              selectedArtifactId={selectedArtifactId}
+              isOwner={isOwner}
+              onNodeClick={(nodeId) => handleNodeClick(nodeId, sidebarColumnIndex)}
+              onArtifactClick={handleArtifactClick}
+            />
+          </div>
+
+          {/* Artifact viewer: takes over all remaining space */}
+          <div style={bStyles.viewerArea}>
+            <ArtifactDetailPanel
+              artifact={selectedArtifact}
+              stemId={stemId}
+              stemUserId={stemUserId}
+              stemUsername={stemUsername}
+              currentUserId={currentUserId}
+              isOwner={isOwner}
+              onClose={handleCloseDetail}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── State 1: Root overview ───────────────────────────────────
+  if (isAtRoot) {
+    const rootItems = getColumnItems(null);
+    const nodeItems = rootItems.filter((i) => i.type === "node");
+    const artifactItems = rootItems.filter((i) => i.type === "artifact");
+
+    return (
+      <div style={bStyles.wrapper}>
+        <div style={bStyles.rootOverview}>
+          {/* Stats */}
+          <div style={bStyles.rootStats}>
+            {totalNodes > 0 && (
+              <span style={bStyles.rootStat}>
+                <span style={bStyles.rootStatNum}>{totalNodes}</span>
+                <span style={bStyles.rootStatLabel}>{totalNodes === 1 ? "node" : "nodes"}</span>
+              </span>
+            )}
+            <span style={bStyles.rootStat}>
+              <span style={bStyles.rootStatNum}>{totalArtifacts}</span>
+              <span style={bStyles.rootStatLabel}>{totalArtifacts === 1 ? "artifact" : "artifacts"}</span>
+            </span>
+          </div>
+
+          {/* Nodes as cards */}
+          {nodeItems.length > 0 && (
+            <div style={bStyles.rootNodeGrid}>
+              {nodeItems.map((item) => {
+                const node = nodesById.get(item.id);
+                if (!node) return null;
+                const children = childNodesMap.get(node.id) || [];
+                const artifactIds = nodeToArtifacts.get(node.id) || [];
+                const count = children.length + artifactIds.length;
+                return (
+                  <button
+                    key={node.id}
+                    onClick={() => handleNodeClick(node.id, 0)}
+                    style={bStyles.rootNodeCard}
+                  >
+                    <span style={bStyles.rootNodeEmoji}>{node.emoji || "\uD83D\uDCC1"}</span>
+                    <span style={bStyles.rootNodeTitle}>{node.title}</span>
+                    {node.description && (
+                      <span style={bStyles.rootNodeDesc}>{node.description}</span>
+                    )}
+                    <span style={bStyles.rootNodeCount}>
+                      {count} {count === 1 ? "item" : "items"} {"\u203A"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Root artifacts below */}
+          {artifactItems.length > 0 && (
+            <div style={bStyles.rootArtifacts}>
+              {nodeItems.length > 0 && (
+                <p style={bStyles.rootArtifactsLabel}>
+                  {artifactItems.length} {artifactItems.length === 1 ? "artifact" : "artifacts"} at root
+                </p>
+              )}
+              {artifactItems.map((item) => {
+                const artifact = artifactsById.get(item.id);
+                if (!artifact) return null;
+                return (
+                  <ArtifactRow
+                    key={item.id}
+                    artifact={artifact}
+                    isSelected={false}
+                    onClick={() => handleArtifactClick(artifact.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {rootItems.length === 0 && (
+            <p style={bStyles.rootEmpty}>
+              {isOwner ? "Your stem is empty \u2014 add nodes or artifacts with the + button" : "Nothing here yet"}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── State 2: Browsing nodes (sidebar + active column) ────────
   return (
-    <div style={browserStyles.wrapper}>
-      {/* Breadcrumb bar (visible when navigated deeper than 1 level) */}
+    <div style={bStyles.wrapper}>
       {openPath.length > 0 && (
-        <div style={browserStyles.breadcrumbBar}>
-          <MobileBreadcrumb
-            breadcrumbs={breadcrumbs}
-            onNavigate={handleBreadcrumbNav}
-          />
+        <div style={bStyles.breadcrumbBar}>
+          <MobileBreadcrumb breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNav} />
         </div>
       )}
-
-      <div style={browserStyles.body}>
-        {/* Parent sidebar — narrow, shows context of where you came from */}
+      <div style={bStyles.body}>
         {parentColumn && (
-          <div style={browserStyles.sidebar}>
+          <div style={bStyles.sidebar}>
             <StemColumn
               columnNode={parentColumn.node}
               items={parentColumn.items}
@@ -260,12 +363,7 @@ export function ColumnBrowser({
             />
           </div>
         )}
-
-        {/* Active column — the main content area */}
-        <div style={{
-          ...browserStyles.mainColumn,
-          ...(selectedArtifact ? browserStyles.mainColumnWithDetail : {}),
-        }}>
+        <div style={bStyles.mainColumn}>
           <StemColumn
             columnNode={activeColumn.node}
             items={activeColumn.items}
@@ -274,33 +372,18 @@ export function ColumnBrowser({
             childNodesMap={childNodesMap}
             nodeToArtifacts={nodeToArtifacts}
             selectedNodeId={activeColumnIndex < openPath.length ? openPath[activeColumnIndex] : null}
-            selectedArtifactId={selectedArtifactId}
+            selectedArtifactId={null}
             isOwner={isOwner}
             onNodeClick={(nodeId) => handleNodeClick(nodeId, activeColumnIndex)}
             onArtifactClick={handleArtifactClick}
           />
         </div>
-
-        {/* Detail panel — generous right panel */}
-        {selectedArtifact && (
-          <div style={browserStyles.detailColumn}>
-            <ArtifactDetailPanel
-              artifact={selectedArtifact}
-              stemId={stemId}
-              stemUserId={stemUserId}
-              stemUsername={stemUsername}
-              currentUserId={currentUserId}
-              isOwner={isOwner}
-              onClose={handleCloseDetail}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-const browserStyles: Record<string, React.CSSProperties> = {
+const bStyles: Record<string, React.CSSProperties> = {
   wrapper: {
     display: "flex",
     flexDirection: "column",
@@ -309,8 +392,8 @@ const browserStyles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     background: "var(--surface)",
     minHeight: 520,
-    height: "calc(100vh - 260px)",
-    maxHeight: 900,
+    height: "calc(100vh - 200px)",
+    maxHeight: 1000,
   },
   breadcrumbBar: {
     borderBottom: "1px solid var(--paper-dark)",
@@ -321,36 +404,117 @@ const browserStyles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
   },
-
-  // Narrow parent sidebar
   sidebar: {
-    width: 260,
-    minWidth: 220,
+    width: 280,
+    minWidth: 240,
     flexShrink: 0,
     borderRight: "1px solid var(--paper-dark)",
     overflow: "hidden",
   },
-
-  // Main active column — fills available space
   mainColumn: {
     flex: 1,
     minWidth: 0,
     overflow: "hidden",
   },
-  mainColumnWithDetail: {
-    // Shrink main column when detail is open
-    flex: "0 0 50%",
-    maxWidth: "50%",
-  },
-
-  // Detail panel — generous right half
-  detailColumn: {
+  viewerArea: {
     flex: 1,
     minWidth: 0,
-    borderLeft: "1px solid var(--paper-dark)",
     overflow: "hidden",
   },
 
+  // ── Root overview ────────────────────────────────────────────
+  rootOverview: {
+    flex: 1,
+    overflowY: "auto" as const,
+    padding: "40px 48px",
+  },
+  rootStats: {
+    display: "flex",
+    gap: 32,
+    marginBottom: 36,
+  },
+  rootStat: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  rootStatNum: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 28,
+    color: "var(--ink)",
+    lineHeight: 1,
+  },
+  rootStatLabel: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 14,
+    color: "var(--ink-light)",
+  },
+  rootNodeGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: 16,
+    marginBottom: 40,
+  },
+  rootNodeCard: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+    padding: "20px 24px",
+    background: "var(--paper)",
+    border: "1px solid var(--paper-dark)",
+    borderRadius: 14,
+    cursor: "pointer",
+    textAlign: "left" as const,
+    transition: "border-color 0.15s, box-shadow 0.15s",
+    fontFamily: "'DM Sans', sans-serif",
+  },
+  rootNodeEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  rootNodeTitle: {
+    fontWeight: 600,
+    fontSize: 16,
+    color: "var(--ink)",
+    lineHeight: 1.3,
+  },
+  rootNodeDesc: {
+    fontSize: 13,
+    color: "var(--ink-mid)",
+    lineHeight: 1.4,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical" as const,
+    overflow: "hidden",
+  },
+  rootNodeCount: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 12,
+    color: "var(--ink-light)",
+    marginTop: 4,
+  },
+  rootArtifacts: {
+    borderTop: "1px solid var(--paper-dark)",
+    paddingTop: 24,
+  },
+  rootArtifactsLabel: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 12,
+    color: "var(--ink-light)",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    margin: 0,
+    marginBottom: 12,
+  },
+  rootEmpty: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 15,
+    color: "var(--ink-light)",
+    textAlign: "center" as const,
+    padding: "80px 20px",
+  },
+
+  // ── Mobile ───────────────────────────────────────────────────
   mobileWrapper: {
     display: "flex",
     flexDirection: "column" as const,
@@ -359,5 +523,6 @@ const browserStyles: Record<string, React.CSSProperties> = {
     borderRadius: 16,
     overflow: "hidden",
     background: "var(--surface)",
+    height: "calc(100vh - 200px)",
   },
 };

@@ -4,9 +4,15 @@ import { getDomain, formatRelative, extractYouTubeId } from "~/lib/utils";
 import { track } from "~/lib/analytics";
 import { styles } from "./stem-styles";
 import { ARTIFACT_TYPES, artifactTypeLabel } from "./ArtifactCard";
-import { IframeViewer } from "./IframeViewer";
 import type { Artifact } from "./types";
 
+/**
+ * Full-tab artifact viewer. Takes over the entire content area of the finder.
+ *
+ * For link artifacts: shows iframe by default (the "tab" experience).
+ * For notes/images/PDFs: shows the content filling the space.
+ * A toolbar at top has: back button, title, domain, open-in-new-tab, edit/delete.
+ */
 export function ArtifactDetailPanel({
   artifact,
   stemId,
@@ -38,18 +44,16 @@ export function ArtifactDetailPanel({
   const [editNote, setEditNote] = useState(artifact.note ?? "");
   const [editQuote, setEditQuote] = useState(artifact.quote ?? "");
   const [editType, setEditType] = useState(artifact.source_type);
-  const [showIframe, setShowIframe] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
 
-  // Reset edit state when artifact changes
   useEffect(() => {
     setEditing(false);
     setEditNote(artifact.note ?? "");
     setEditQuote(artifact.quote ?? "");
     setEditType(artifact.source_type);
-    setShowIframe(false);
+    setIframeError(false);
   }, [artifact.id]);
 
-  // Close edit panel after save
   useEffect(() => {
     if (editFetcher.state === "idle" && editFetcher.data?.success) {
       setEditing(false);
@@ -64,13 +68,8 @@ export function ArtifactDetailPanel({
   const embedId = artifact.source_type === "youtube" && artifact.url ? extractYouTubeId(artifact.url) : null;
   const embedUrl = artifact.embed_url || (embedId ? `https://www.youtube.com/embed/${embedId}` : null);
   const hasUrl = !!artifact.url;
-
-  const formatBytes = (bytes: number | null) => {
-    if (!bytes) return "";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+  // Can we show this as an iframe? Links (not notes, not files) with a URL
+  const canEmbed = hasUrl && !isNote && !isFile;
 
   const isDeleting =
     deleteFetcher.state !== "idle" &&
@@ -81,230 +80,243 @@ export function ArtifactDetailPanel({
   }
 
   return (
-    <div style={{
-      ...panelStyles.container,
-      ...(isMobile ? panelStyles.mobile : {}),
-    }}>
-      {/* Header bar */}
-      <div style={panelStyles.header}>
-        <span style={panelStyles.typeBadge}>{typeInfo.emoji} {typeInfo.label}</span>
-        <button onClick={onClose} style={panelStyles.closeBtn} title="Close">{"\u2715"}</button>
+    <div style={panelStyles.container}>
+      {/* ── Toolbar ─────────────────────────────────────────────── */}
+      <div style={panelStyles.toolbar}>
+        <button onClick={onClose} style={panelStyles.backBtn} title="Back to list">
+          {"\u2190"}
+        </button>
+
+        <div style={panelStyles.toolbarCenter}>
+          {domain && (
+            <span style={panelStyles.toolbarDomain}>
+              {artifact.favicon_url && (
+                <img src={artifact.favicon_url} alt="" style={{ width: 14, height: 14, borderRadius: 2 }} />
+              )}
+              {domain}
+            </span>
+          )}
+          {!domain && (
+            <span style={panelStyles.toolbarTitle}>
+              {typeInfo.emoji} {artifact.title || typeInfo.label}
+            </span>
+          )}
+        </div>
+
+        <div style={panelStyles.toolbarActions}>
+          {hasUrl && (
+            <a
+              href={artifact.url!}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={panelStyles.toolbarBtn}
+              title="Open in new tab"
+              onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
+            >
+              {"\u2197"}
+            </a>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => { setEditing((e) => !e); setEditNote(artifact.note ?? ""); setEditQuote(artifact.quote ?? ""); setEditType(artifact.source_type); }}
+              style={panelStyles.toolbarBtn}
+              title="Edit"
+            >
+              {"\u270E"}
+            </button>
+          )}
+          {canEdit && (
+            <deleteFetcher.Form method="post" style={{ display: "inline" }}>
+              <input type="hidden" name="intent" value="delete_artifact" />
+              <input type="hidden" name="artifactId" value={artifact.id} />
+              <button type="submit" style={{ ...panelStyles.toolbarBtn, color: "var(--taken, #c0392b)" }} title="Delete">
+                {"\u2715"}
+              </button>
+            </deleteFetcher.Form>
+          )}
+          {canReport && !canEdit && (
+            reported ? (
+              <span style={{ ...panelStyles.toolbarBtn, cursor: "default", opacity: 0.5 }}>Reported</span>
+            ) : (
+              <reportFetcher.Form method="post" style={{ display: "inline" }}>
+                <input type="hidden" name="intent" value="report_artifact" />
+                <input type="hidden" name="artifactId" value={artifact.id} />
+                <button type="submit" style={panelStyles.toolbarBtn} title="Report">{"\u2691"}</button>
+              </reportFetcher.Form>
+            )
+          )}
+          <button onClick={onClose} style={panelStyles.toolbarBtn} title="Close">
+            {"\u2715"}
+          </button>
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={panelStyles.body}>
-        {/* Embed / Image */}
-        {!isNote && !isFile && embedUrl && !showIframe && (
-          <iframe
-            src={embedUrl}
-            style={{ width: "100%", aspectRatio: "16/9", border: "none", borderRadius: 8, marginBottom: 16 }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        )}
-
-        {!isNote && !isFile && !embedUrl && artifact.image_url && !showIframe && (
-          <img
-            src={artifact.image_url}
-            alt=""
-            style={{ width: "100%", borderRadius: 8, marginBottom: 16, display: "block" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        )}
-
-        {isFile && artifact.source_type === "image" && (
-          <img
-            src={`https://api.stem.md/files/${artifact.file_key}`}
-            alt={artifact.title || "Uploaded image"}
-            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 16, display: "block" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        )}
-
-        {/* Iframe viewer (toggled) */}
-        {showIframe && artifact.url && (
-          <IframeViewer url={artifact.url} onClose={() => setShowIframe(false)} />
-        )}
-
-        {/* Title */}
-        {!showIframe && (
-          <>
-            <h3 style={panelStyles.title}>
-              {artifact.url ? (
-                <a
-                  href={artifact.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "inherit", textDecoration: "none" }}
-                  onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
-                >
-                  {artifact.title || artifact.url}
-                </a>
-              ) : (
-                artifact.title || "Untitled"
-              )}
-            </h3>
-
-            {/* Description */}
-            {artifact.description && (
-              <p style={panelStyles.description}>{artifact.description}</p>
-            )}
-
-            {/* Note body (for note-type artifacts) */}
-            {isNote && artifact.body && (
-              <div style={panelStyles.noteBody}>{artifact.body}</div>
-            )}
-
-            {/* Curator note */}
-            {artifact.note && (
-              <p style={panelStyles.note}>{artifact.note}</p>
-            )}
-
-            {/* Quote */}
-            {artifact.quote && (
-              <blockquote style={panelStyles.quote}>"{artifact.quote}"</blockquote>
-            )}
-
-            {/* File info */}
-            {isFile && artifact.source_type === "pdf" && (
-              <a
-                href={`https://api.stem.md/files/${artifact.file_key}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={panelStyles.fileLink}
-              >
-                {"\uD83D\uDCC4"} {artifact.title || "Download PDF"}
-                {artifact.file_size ? ` (${formatBytes(artifact.file_size)})` : ""}
-              </a>
-            )}
-
-            {/* Meta row */}
-            <div style={panelStyles.metaRow}>
-              {domain && (
-                <span style={panelStyles.domain}>
-                  {artifact.favicon_url && (
-                    <img src={artifact.favicon_url} alt="" style={{ width: 12, height: 12, flexShrink: 0 }} />
-                  )}
-                  {domain}
-                </span>
-              )}
-              {showContributor && (
-                <span style={panelStyles.contributor}>via @{artifact.contributor_username}</span>
-              )}
-              <span style={panelStyles.timestamp}>{formatRelative(artifact.created_at)}</span>
-            </div>
-
-            {/* Open in Stem button (for link-type artifacts) */}
-            {hasUrl && !isNote && !isFile && !showIframe && (
-              <button
-                onClick={() => setShowIframe(true)}
-                style={panelStyles.openInStemBtn}
-              >
-                Open in Stem {"\u25B6"}
-              </button>
-            )}
-
-            {/* Actions */}
-            <div style={panelStyles.actions}>
-              {hasUrl && (
-                <a
-                  href={artifact.url!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={panelStyles.actionLink}
-                  onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
-                >
-                  Open in new tab {"\u2197"}
-                </a>
-              )}
-
-              {canEdit && (
+      {/* ── Edit bar (shown inline below toolbar) ───────────────── */}
+      {editing && (
+        <div style={panelStyles.editBar}>
+          <editFetcher.Form method="post" style={panelStyles.editForm}>
+            <input type="hidden" name="intent" value="edit_artifact" />
+            <input type="hidden" name="artifactId" value={artifact.id} />
+            <div style={styles.typePickerRow}>
+              {ARTIFACT_TYPES.map((t) => (
                 <button
+                  key={t.value}
                   type="button"
-                  onClick={() => { setEditing((e) => !e); setEditNote(artifact.note ?? ""); setEditQuote(artifact.quote ?? ""); setEditType(artifact.source_type); }}
-                  style={panelStyles.actionBtn}
+                  onClick={() => setEditType(t.value)}
+                  style={{
+                    ...styles.typePill,
+                    background: editType === t.value ? "var(--leaf)" : "transparent",
+                    borderColor: editType === t.value ? "var(--forest)" : "var(--paper-dark)",
+                    color: editType === t.value ? "var(--forest)" : "var(--ink-light)",
+                  }}
                 >
-                  {editing ? "Cancel edit" : "Edit"}
+                  {t.emoji} {t.label}
                 </button>
-              )}
-
-              {canEdit && (
-                <deleteFetcher.Form method="post" style={{ display: "inline" }}>
-                  <input type="hidden" name="intent" value="delete_artifact" />
-                  <input type="hidden" name="artifactId" value={artifact.id} />
-                  <button type="submit" style={{ ...panelStyles.actionBtn, color: "var(--taken, #c0392b)" }}>
-                    Delete
-                  </button>
-                </deleteFetcher.Form>
-              )}
-
-              {canReport && !canEdit && (
-                reported ? (
-                  <span style={panelStyles.reportedLabel}>Reported</span>
-                ) : (
-                  <reportFetcher.Form method="post" style={{ display: "inline" }}>
-                    <input type="hidden" name="intent" value="report_artifact" />
-                    <input type="hidden" name="artifactId" value={artifact.id} />
-                    <button type="submit" style={panelStyles.actionBtn}>Report</button>
-                  </reportFetcher.Form>
-                )
-              )}
+              ))}
             </div>
-
-            {/* Edit form */}
-            {editing && (
-              <editFetcher.Form method="post" style={panelStyles.editForm}>
-                <input type="hidden" name="intent" value="edit_artifact" />
-                <input type="hidden" name="artifactId" value={artifact.id} />
-                <div style={styles.typePickerRow}>
-                  {ARTIFACT_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setEditType(t.value)}
-                      style={{
-                        ...styles.typePill,
-                        background: editType === t.value ? "var(--leaf)" : "transparent",
-                        borderColor: editType === t.value ? "var(--forest)" : "var(--paper-dark)",
-                        color: editType === t.value ? "var(--forest)" : "var(--ink-light)",
-                      }}
-                    >
-                      {t.emoji} {t.label}
-                    </button>
-                  ))}
-                </div>
-                <input type="hidden" name="artifact_type" value={editType} />
-                <input
-                  type="text"
-                  name="note"
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Note (optional)"
-                  style={{ ...styles.noteInput, width: "100%", boxSizing: "border-box" as const }}
-                />
-                <textarea
-                  name="quote"
-                  value={editQuote}
-                  onChange={(e) => setEditQuote(e.target.value)}
-                  placeholder="Key quote (optional)"
-                  maxLength={300}
-                  rows={2}
-                  style={styles.quoteInput}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="submit" disabled={editFetcher.state !== "idle"} style={styles.settingsSaveBtn}>
-                    {editFetcher.state !== "idle" ? "Saving\u2026" : "Save"}
-                  </button>
-                  <button type="button" onClick={() => setEditing(false)} style={styles.subtleBtn}>
-                    Cancel
-                  </button>
-                </div>
-                {editFetcher.data?.error && (
-                  <p style={{ fontSize: 12, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>{editFetcher.data.error}</p>
-                )}
-              </editFetcher.Form>
+            <input type="hidden" name="artifact_type" value={editType} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="text"
+                name="note"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="Note"
+                style={{ ...styles.noteInput, flex: 1, boxSizing: "border-box" as const }}
+              />
+              <input
+                type="text"
+                name="quote"
+                value={editQuote}
+                onChange={(e) => setEditQuote(e.target.value)}
+                placeholder="Quote"
+                style={{ ...styles.noteInput, flex: 1, boxSizing: "border-box" as const }}
+              />
+              <button type="submit" disabled={editFetcher.state !== "idle"} style={styles.settingsSaveBtn}>
+                {editFetcher.state !== "idle" ? "Saving\u2026" : "Save"}
+              </button>
+              <button type="button" onClick={() => setEditing(false)} style={styles.subtleBtn}>Cancel</button>
+            </div>
+            {editFetcher.data?.error && (
+              <p style={{ fontSize: 12, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>{editFetcher.data.error}</p>
             )}
-          </>
+          </editFetcher.Form>
+        </div>
+      )}
+
+      {/* ── Main content area ───────────────────────────────────── */}
+      <div style={panelStyles.content}>
+        {/* LINK artifacts: iframe fills the space */}
+        {canEmbed && !iframeError && (
+          embedUrl ? (
+            <iframe
+              src={embedUrl}
+              style={panelStyles.iframe}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <iframe
+              src={artifact.url!}
+              style={panelStyles.iframe}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              onError={() => setIframeError(true)}
+              onLoad={(e) => {
+                try {
+                  const frame = e.target as HTMLIFrameElement;
+                  if (frame.contentDocument === null && frame.contentWindow === null) {
+                    setIframeError(true);
+                  }
+                } catch { /* cross-origin — normal */ }
+              }}
+            />
+          )
+        )}
+
+        {/* Iframe error fallback */}
+        {canEmbed && iframeError && (
+          <div style={panelStyles.fallback}>
+            {artifact.image_url && (
+              <img
+                src={artifact.image_url}
+                alt=""
+                style={{ maxWidth: 480, width: "100%", borderRadius: 12, marginBottom: 24 }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+            <h2 style={panelStyles.fallbackTitle}>{artifact.title || artifact.url}</h2>
+            {artifact.description && (
+              <p style={panelStyles.fallbackDesc}>{artifact.description}</p>
+            )}
+            {artifact.note && (
+              <p style={panelStyles.fallbackNote}>{artifact.note}</p>
+            )}
+            {artifact.quote && (
+              <blockquote style={panelStyles.fallbackQuote}>"{artifact.quote}"</blockquote>
+            )}
+            <div style={panelStyles.fallbackMeta}>
+              {showContributor && <span>via @{artifact.contributor_username}</span>}
+              <span>{formatRelative(artifact.created_at)}</span>
+            </div>
+            <p style={panelStyles.fallbackMsg}>This site can't be embedded</p>
+            <a
+              href={artifact.url!}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={panelStyles.fallbackLink}
+              onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
+            >
+              Open in new tab {"\u2197"}
+            </a>
+          </div>
+        )}
+
+        {/* NOTE artifacts: full content display */}
+        {isNote && (
+          <div style={panelStyles.richContent}>
+            <h2 style={panelStyles.richTitle}>{artifact.title || "Note"}</h2>
+            {artifact.body && (
+              <div style={panelStyles.richBody}>{artifact.body}</div>
+            )}
+            <div style={panelStyles.richMeta}>
+              {showContributor && <span>via @{artifact.contributor_username}</span>}
+              <span>{formatRelative(artifact.created_at)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* IMAGE artifacts */}
+        {isFile && artifact.source_type === "image" && (
+          <div style={panelStyles.imageContent}>
+            <img
+              src={`https://api.stem.md/files/${artifact.file_key}`}
+              alt={artifact.title || "Uploaded image"}
+              style={panelStyles.fullImage}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            {(artifact.title || artifact.note) && (
+              <div style={panelStyles.imageCaption}>
+                {artifact.title && <h3 style={{ margin: 0, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}>{artifact.title}</h3>}
+                {artifact.note && <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--ink-mid)" }}>{artifact.note}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PDF artifacts */}
+        {isFile && artifact.source_type === "pdf" && (
+          <div style={panelStyles.richContent}>
+            <h2 style={panelStyles.richTitle}>{artifact.title || "PDF Document"}</h2>
+            {artifact.note && <p style={{ fontSize: 15, color: "var(--ink-mid)", lineHeight: 1.6, marginBottom: 24 }}>{artifact.note}</p>}
+            <a
+              href={`https://api.stem.md/files/${artifact.file_key}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={panelStyles.fallbackLink}
+            >
+              Open PDF {"\u2197"}
+            </a>
+          </div>
         )}
       </div>
     </div>
@@ -314,184 +326,243 @@ export function ArtifactDetailPanel({
 const panelStyles: Record<string, React.CSSProperties> = {
   container: {
     width: "100%",
-    background: "var(--paper)",
+    height: "100%",
     display: "flex",
     flexDirection: "column",
-    height: "100%",
-    animation: "fadeIn 0.15s ease-out",
+    background: "var(--surface)",
   },
-  mobile: {
-    width: "100%",
-    borderLeft: "none",
-    flex: 1,
-  },
-  header: {
+
+  // ── Toolbar ──────────────────────────────────────────────────
+  toolbar: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 28px",
+    gap: 12,
+    padding: "10px 16px",
     borderBottom: "1px solid var(--paper-dark)",
+    background: "var(--paper)",
     flexShrink: 0,
   },
-  typeBadge: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13,
-    fontWeight: 500,
-    color: "var(--ink-mid)",
-  },
-  closeBtn: {
+  backBtn: {
     background: "none",
     border: "none",
-    fontSize: 16,
-    color: "var(--ink-light)",
+    fontSize: 18,
+    color: "var(--ink-mid)",
     cursor: "pointer",
     padding: "4px 8px",
-    borderRadius: 4,
+    borderRadius: 6,
+    lineHeight: 1,
+    flexShrink: 0,
   },
-  body: {
+  toolbarCenter: {
     flex: 1,
-    overflowY: "auto" as const,
-    padding: "28px 32px",
-  },
-  title: {
-    fontFamily: "'DM Serif Display', serif",
-    fontSize: 22,
-    fontWeight: 400,
-    color: "var(--ink)",
-    lineHeight: 1.3,
-    margin: 0,
-    marginBottom: 16,
-  },
-  description: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14,
-    color: "var(--ink-mid)",
-    lineHeight: 1.5,
-    margin: 0,
-    marginBottom: 12,
-  },
-  noteBody: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 15,
-    color: "var(--ink)",
-    lineHeight: 1.6,
-    whiteSpace: "pre-wrap" as const,
-    marginBottom: 16,
-  },
-  note: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14,
-    color: "var(--ink)",
-    lineHeight: 1.5,
-    fontStyle: "italic",
-    borderLeft: "3px solid var(--forest)",
-    paddingLeft: 12,
-    margin: 0,
-    marginBottom: 12,
-  },
-  quote: {
-    fontFamily: "'DM Serif Display', serif",
-    fontSize: 15,
-    color: "var(--ink-mid)",
-    fontStyle: "italic",
-    borderLeft: "3px solid var(--paper-dark)",
-    paddingLeft: 14,
-    lineHeight: 1.5,
-    margin: 0,
-    marginLeft: 0,
-    marginBottom: 16,
-  },
-  fileLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14,
-    color: "var(--forest)",
-    textDecoration: "none",
-    marginBottom: 16,
-  },
-  metaRow: {
+    minWidth: 0,
     display: "flex",
-    flexWrap: "wrap" as const,
     alignItems: "center",
-    gap: 10,
-    marginBottom: 16,
-    paddingTop: 12,
-    borderTop: "1px solid var(--paper-dark)",
+    justifyContent: "center",
   },
-  domain: {
+  toolbarDomain: {
     display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 13,
+    color: "var(--ink-mid)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  toolbarTitle: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "var(--ink)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  toolbarActions: {
+    display: "flex",
     alignItems: "center",
     gap: 4,
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 12,
-    color: "var(--ink-light)",
+    flexShrink: 0,
   },
-  contributor: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 12,
-    color: "var(--ink-light)",
-  },
-  timestamp: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 11,
-    color: "var(--ink-light)",
-  },
-  openInStemBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-    padding: "12px 16px",
-    background: "var(--leaf)",
-    border: "1px solid var(--leaf-border)",
-    borderRadius: 10,
-    cursor: "pointer",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14,
-    fontWeight: 500,
-    color: "var(--forest)",
-    marginBottom: 16,
-    transition: "background 0.12s",
-  },
-  actions: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 12,
-    marginBottom: 16,
-  },
-  actionLink: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13,
-    color: "var(--forest)",
-    textDecoration: "none",
-    fontWeight: 500,
-  },
-  actionBtn: {
+  toolbarBtn: {
     background: "none",
     border: "none",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13,
-    color: "var(--ink-light)",
+    fontSize: 15,
+    color: "var(--ink-mid)",
     cursor: "pointer",
-    padding: 0,
-    textDecoration: "underline",
-    textDecorationColor: "var(--paper-dark)",
+    padding: "6px 8px",
+    borderRadius: 6,
+    textDecoration: "none",
+    fontFamily: "inherit",
+    lineHeight: 1,
+    display: "inline-flex",
+    alignItems: "center",
   },
-  reportedLabel: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: 12,
-    color: "var(--ink-light)",
+
+  // ── Edit bar ─────────────────────────────────────────────────
+  editBar: {
+    padding: "12px 20px",
+    borderBottom: "1px solid var(--paper-dark)",
+    background: "var(--paper-mid)",
+    flexShrink: 0,
   },
   editForm: {
     display: "flex",
     flexDirection: "column" as const,
-    gap: 10,
-    marginTop: 8,
-    padding: 16,
-    background: "var(--surface)",
+    gap: 8,
+  },
+
+  // ── Content area ─────────────────────────────────────────────
+  content: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column" as const,
+  },
+  iframe: {
+    width: "100%",
+    flex: 1,
+    border: "none",
+    background: "#fff",
+  },
+
+  // ── Fallback (iframe failed) ─────────────────────────────────
+  fallback: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 40px",
+    textAlign: "center" as const,
+    maxWidth: 600,
+    margin: "0 auto",
+  },
+  fallbackTitle: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 24,
+    fontWeight: 400,
+    color: "var(--ink)",
+    margin: 0,
+    marginBottom: 12,
+  },
+  fallbackDesc: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 15,
+    color: "var(--ink-mid)",
+    lineHeight: 1.6,
+    margin: 0,
+    marginBottom: 16,
+  },
+  fallbackNote: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 14,
+    color: "var(--ink)",
+    fontStyle: "italic",
+    borderLeft: "3px solid var(--forest)",
+    paddingLeft: 14,
+    margin: 0,
+    marginBottom: 16,
+    textAlign: "left" as const,
+    alignSelf: "stretch",
+  },
+  fallbackQuote: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 16,
+    color: "var(--ink-mid)",
+    fontStyle: "italic",
+    borderLeft: "3px solid var(--paper-dark)",
+    paddingLeft: 14,
+    margin: 0,
+    marginBottom: 16,
+    textAlign: "left" as const,
+    alignSelf: "stretch",
+  },
+  fallbackMeta: {
+    display: "flex",
+    gap: 12,
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 12,
+    color: "var(--ink-light)",
+    marginBottom: 24,
+  },
+  fallbackMsg: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 14,
+    color: "var(--ink-light)",
+    margin: 0,
+    marginBottom: 12,
+  },
+  fallbackLink: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 15,
+    fontWeight: 500,
+    color: "var(--forest)",
+    textDecoration: "none",
+    padding: "10px 24px",
+    background: "var(--leaf)",
+    border: "1px solid var(--leaf-border)",
     borderRadius: 10,
-    border: "1px solid var(--paper-dark)",
+  },
+
+  // ── Rich content (notes, fallback) ───────────────────────────
+  richContent: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 40px",
+    maxWidth: 640,
+    margin: "0 auto",
+    width: "100%",
+    boxSizing: "border-box" as const,
+  },
+  richTitle: {
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 28,
+    fontWeight: 400,
+    color: "var(--ink)",
+    margin: 0,
+    marginBottom: 20,
+    textAlign: "center" as const,
+  },
+  richBody: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 16,
+    color: "var(--ink)",
+    lineHeight: 1.7,
+    whiteSpace: "pre-wrap" as const,
+    width: "100%",
+    marginBottom: 24,
+  },
+  richMeta: {
+    display: "flex",
+    gap: 12,
+    fontFamily: "'DM Mono', monospace",
+    fontSize: 12,
+    color: "var(--ink-light)",
+  },
+
+  // ── Image content ────────────────────────────────────────────
+  imageContent: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  fullImage: {
+    maxWidth: "100%",
+    maxHeight: "80%",
+    objectFit: "contain" as const,
+    borderRadius: 8,
+  },
+  imageCaption: {
+    marginTop: 16,
+    textAlign: "center" as const,
   },
 };
