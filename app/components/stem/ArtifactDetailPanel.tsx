@@ -313,10 +313,7 @@ export function ArtifactDetailPanel({
 
 const panelStyles: Record<string, React.CSSProperties> = {
   container: {
-    width: 380,
-    minWidth: 320,
-    flexShrink: 0,
-    borderLeft: "1px solid var(--paper-dark)",
+    width: "100%",
     background: "var(--paper)",
     display: "flex",
     flexDirection: "column",
@@ -332,7 +329,7 @@ const panelStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "12px 16px",
+    padding: "16px 28px",
     borderBottom: "1px solid var(--paper-dark)",
     flexShrink: 0,
   },
@@ -354,16 +351,16 @@ const panelStyles: Record<string, React.CSSProperties> = {
   body: {
     flex: 1,
     overflowY: "auto" as const,
-    padding: 20,
+    padding: "28px 32px",
   },
   title: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 18,
-    fontWeight: 600,
+    fontFamily: "'DM Serif Display', serif",
+    fontSize: 22,
+    fontWeight: 400,
     color: "var(--ink)",
-    lineHeight: 1.35,
+    lineHeight: 1.3,
     margin: 0,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   description: {
     fontFamily: "'DM Sans', sans-serif",

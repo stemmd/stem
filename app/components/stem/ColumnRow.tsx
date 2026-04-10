@@ -95,18 +95,18 @@ const rowStyles: Record<string, React.CSSProperties> = {
   base: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 14,
     width: "100%",
-    padding: "10px 12px",
+    padding: "14px 24px",
     border: "none",
     borderBottom: "1px solid var(--paper-dark)",
     background: "transparent",
     cursor: "pointer",
     textAlign: "left",
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 14,
+    fontSize: 15,
     color: "var(--ink)",
-    transition: "background 0.1s ease",
+    transition: "background 0.12s ease",
   },
 
   // Node variant
@@ -116,12 +116,12 @@ const rowStyles: Record<string, React.CSSProperties> = {
   nodeRowSelected: {
     background: "var(--leaf)",
     borderLeft: "3px solid var(--forest)",
-    paddingLeft: 9,
+    paddingLeft: 21,
   },
   nodeEmoji: {
-    fontSize: 16,
+    fontSize: 18,
     flexShrink: 0,
-    width: 22,
+    width: 26,
     textAlign: "center" as const,
   },
   nodeTitle: {
@@ -152,16 +152,16 @@ const rowStyles: Record<string, React.CSSProperties> = {
     background: "var(--paper-mid)",
   },
   favicon: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
     flexShrink: 0,
     objectFit: "cover" as const,
   },
   typeEmoji: {
-    fontSize: 14,
+    fontSize: 16,
     flexShrink: 0,
-    width: 22,
+    width: 26,
     textAlign: "center" as const,
   },
   artifactInfo: {

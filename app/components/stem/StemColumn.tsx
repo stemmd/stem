@@ -106,37 +106,33 @@ const colStyles: Record<string, React.CSSProperties> = {
   column: {
     display: "flex",
     flexDirection: "column",
-    minWidth: 260,
-    maxWidth: 320,
-    width: 280,
-    flexShrink: 0,
-    borderRight: "1px solid var(--paper-dark)",
+    width: "100%",
     background: "var(--surface)",
     height: "100%",
   },
 
   header: {
-    padding: "14px 14px 10px",
+    padding: "20px 24px 16px",
     borderBottom: "1px solid var(--paper-dark)",
     background: "var(--paper)",
   },
   headerEmoji: {
-    fontSize: 18,
-    marginRight: 6,
+    fontSize: 22,
+    marginRight: 8,
   },
   headerTitle: {
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 600,
-    fontSize: 14,
+    fontSize: 16,
     color: "var(--ink)",
   },
   headerDesc: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: 12,
+    fontSize: 13,
     color: "var(--ink-mid)",
-    lineHeight: 1.4,
+    lineHeight: 1.5,
     margin: 0,
-    marginTop: 4,
+    marginTop: 6,
   },
 
   list: {

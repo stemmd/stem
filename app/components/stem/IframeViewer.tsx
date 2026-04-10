@@ -130,7 +130,8 @@ const iframeStyles: Record<string, React.CSSProperties> = {
   },
   iframe: {
     width: "100%",
-    height: 400,
+    height: "60vh",
+    minHeight: 400,
     border: "none",
     background: "#fff",
   },
