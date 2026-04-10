@@ -164,6 +164,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
           }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.4; }

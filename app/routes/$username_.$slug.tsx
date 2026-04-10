@@ -20,14 +20,14 @@ import { createNotification } from "~/lib/notifications.server";
 // Extracted stem components
 import type { Stem, BranchMember, StemCategory, Node, ArtifactNode, Artifact } from "~/components/stem/types";
 import { styles } from "~/components/stem/stem-styles";
-import { AddArtifactForm } from "~/components/stem/AddArtifactForm";
 import { StemFollowers } from "~/components/stem/StemFollowers";
 import { OwnerActions, VisitorActions } from "~/components/stem/StemActions";
 import { StemSettings } from "~/components/stem/StemSettings";
 import { PendingSuggestions } from "~/components/stem/PendingSuggestions";
 import { BranchMembersSection } from "~/components/stem/BranchMembers";
-import { OrganicStem } from "~/components/stem/OrganicStem";
-import { AddNodeForm } from "~/components/stem/AddNodeForm";
+import { ColumnBrowser } from "~/components/stem/ColumnBrowser";
+import { AddItemModal } from "~/components/stem/AddItemModal";
+import { FloatingAddButton } from "~/components/stem/FloatingAddButton";
 import { StemHeader } from "~/components/stem/StemHeader";
 import { PendingNodeRow } from "~/components/stem/PendingNodeRow";
 
@@ -753,6 +753,8 @@ export default function StemPage() {
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [showPendingNodes, setShowPendingNodes] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [addModalTab, setAddModalTab] = useState<"artifact" | "node" | null>(null);
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   // Build node tree and artifact mapping (memoized to avoid recomputation on state changes)
   const { approvedNodes, pendingNodes, rootNodes, childNodesMap, artifactToNodes, nodeToArtifacts, artifactsById, rootArtifacts, hasNodes } = useMemo(() => {
@@ -848,17 +850,6 @@ export default function StemPage() {
           <StemFollowers stemId={stem.id} count={followCount} />
         </StemHeader>
 
-        {canContribute && (
-          <div style={{ maxWidth: 640, margin: "0 auto 40px" }}>
-            <AddArtifactForm
-              stemId={stem.id}
-              isOwner={isOwner}
-              stemUsername={stem.username}
-              contributionMode={stem.contribution_mode}
-              canUpload={userHasApprovedArtifact}
-            />
-          </div>
-        )}
         {!canContribute && !isOwner && user && stem.contribution_mode === "mutuals" && !isBranchMember && (
           <p style={styles.closedNote}>
             Only mutuals of @{stem.username} can suggest artifacts here.
@@ -879,22 +870,16 @@ export default function StemPage() {
           </div>
         )}
 
-        {isOwner && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-            <AddNodeForm stemId={stem.id} parentId={null} />
-          </div>
-        )}
-
-        {/* Organic stem layout */}
-        <OrganicStem
+        {/* Column browser layout */}
+        <ColumnBrowser
           stemId={stem.id}
+          rootNodes={rootNodes}
+          rootArtifacts={rootArtifacts}
+          approvedNodes={approvedNodes}
           childNodesMap={childNodesMap}
           nodeToArtifacts={nodeToArtifacts}
           artifactsById={artifactsById}
           artifactToNodes={artifactToNodes}
-          approvedNodes={approvedNodes}
-          rootNodes={rootNodes}
-          rootArtifacts={rootArtifacts}
           stemUserId={stem.user_id}
           stemUsername={stem.username}
           currentUserId={user?.id}
@@ -948,6 +933,33 @@ export default function StemPage() {
           </div>
         )}
       </main>
+
+      {/* FAB for owners/contributors */}
+      {canContribute && (
+        <FloatingAddButton
+          onAdd={(type) => {
+            if (type === "node") {
+              setAddModalTab("node");
+            } else {
+              setAddModalTab("artifact");
+            }
+          }}
+        />
+      )}
+
+      {/* Add item modal */}
+      {addModalTab && (
+        <AddItemModal
+          stemId={stem.id}
+          isOwner={isOwner}
+          stemUsername={stem.username}
+          contributionMode={stem.contribution_mode}
+          canUpload={userHasApprovedArtifact}
+          nodeId={activeNodeId}
+          initialTab={addModalTab}
+          onClose={() => setAddModalTab(null)}
+        />
+      )}
 
       {/* Settings overlay */}
       {isOwner && showSettings && (
