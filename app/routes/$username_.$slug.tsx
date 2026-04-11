@@ -25,7 +25,7 @@ import { OwnerActions, VisitorActions } from "~/components/stem/StemActions";
 import { StemSettings } from "~/components/stem/StemSettings";
 import { PendingSuggestions } from "~/components/stem/PendingSuggestions";
 import { BranchMembersSection } from "~/components/stem/BranchMembers";
-import { StemGrid } from "~/components/stem/StemGrid";
+import { StemTree } from "~/components/stem/StemTree";
 import { AddItemModal } from "~/components/stem/AddItemModal";
 import { FloatingAddButton } from "~/components/stem/FloatingAddButton";
 import { StemHeader } from "~/components/stem/StemHeader";
@@ -870,8 +870,8 @@ export default function StemPage() {
           </div>
         )}
 
-        {/* Masonry grid layout */}
-        <StemGrid
+        {/* Stem tree layout */}
+        <StemTree
           stemId={stem.id}
           rootNodes={rootNodes}
           rootArtifacts={rootArtifacts}
