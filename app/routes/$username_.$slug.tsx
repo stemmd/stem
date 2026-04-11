@@ -25,7 +25,7 @@ import { OwnerActions, VisitorActions } from "~/components/stem/StemActions";
 import { StemSettings } from "~/components/stem/StemSettings";
 import { PendingSuggestions } from "~/components/stem/PendingSuggestions";
 import { BranchMembersSection } from "~/components/stem/BranchMembers";
-import { ColumnBrowser } from "~/components/stem/ColumnBrowser";
+import { StemGrid } from "~/components/stem/StemGrid";
 import { AddItemModal } from "~/components/stem/AddItemModal";
 import { FloatingAddButton } from "~/components/stem/FloatingAddButton";
 import { StemHeader } from "~/components/stem/StemHeader";
@@ -870,8 +870,8 @@ export default function StemPage() {
           </div>
         )}
 
-        {/* Column browser layout */}
-        <ColumnBrowser
+        {/* Masonry grid layout */}
+        <StemGrid
           stemId={stem.id}
           rootNodes={rootNodes}
           rootArtifacts={rootArtifacts}
@@ -887,6 +887,7 @@ export default function StemPage() {
           canContribute={canContribute}
           contributionMode={stem.contribution_mode}
           canUpload={userHasApprovedArtifact}
+          onNodeChange={setActiveNodeId}
         />
 
         {/* Pending nodes (owner review) */}
