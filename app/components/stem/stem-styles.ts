@@ -596,72 +596,28 @@ export const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
   },
 
-  // ── Node rail ───────────────────────────────────────────────────────────
-  nodeRail: {
-    display: "flex", flexDirection: "column" as const, gap: 2,
-    position: "sticky" as const, top: 16,
-    maxHeight: "calc(100vh - 32px)", overflowY: "auto" as const,
-    paddingRight: 4,
-  },
-  nodeRailHeader: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "6px 8px", marginBottom: 4,
-    fontFamily: "'DM Mono', monospace", fontSize: 11,
-    color: "var(--ink-light)", textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-  },
-  nodeRailItem: {
-    display: "flex", alignItems: "center", gap: 8,
-    width: "100%", padding: "7px 10px", borderRadius: 8,
-    background: "none", border: "none", cursor: "pointer",
-    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    color: "var(--ink-mid)", textAlign: "left" as const,
-    transition: "background 0.12s, color 0.12s",
-  },
-  nodeRailItemActive: {
-    background: "var(--leaf)", color: "var(--forest)", fontWeight: 600,
-  },
-  nodeRailItemRoot: {
+  // ── Sibling strip (shown in focus mode) ─────────────────────────────────
+  siblingStrip: {
     display: "flex", alignItems: "center", gap: 6,
-    width: "100%", padding: "7px 10px", borderRadius: 8,
-    background: "none", border: "none", cursor: "pointer",
-    fontFamily: "'DM Mono', monospace", fontSize: 12,
-    color: "var(--ink-mid)", textAlign: "left" as const,
-    transition: "background 0.12s, color 0.12s",
+    overflowX: "auto" as const, padding: "2px 0",
+    marginBottom: 20,
+    scrollbarWidth: "thin" as const,
   },
-  nodeRailCaret: {
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    width: 16, height: 16, fontSize: 10, color: "var(--ink-light)",
-    flexShrink: 0, background: "none", border: "none", cursor: "pointer",
-    padding: 0,
-  },
-  nodeRailEmoji: { fontSize: 14, flexShrink: 0, lineHeight: 1 },
-  nodeRailTitle: {
-    flex: 1, minWidth: 0,
-    overflow: "hidden" as const, textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
-  },
-  nodeRailCount: {
-    fontFamily: "'DM Mono', monospace", fontSize: 10,
-    color: "var(--ink-light)", flexShrink: 0,
-  },
-  nodeRailDrawerBackdrop: {
-    position: "fixed" as const, inset: 0,
-    background: "rgba(0,0,0,0.25)", zIndex: 90,
-    animation: "fadeIn 0.15s ease-out",
-  },
-  nodeRailDrawer: {
-    position: "fixed" as const, bottom: 0, left: 0, right: 0,
-    maxHeight: "70vh", overflowY: "auto" as const,
-    background: "var(--paper)", borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: "16px 16px 24px", zIndex: 91,
-    boxShadow: "0 -4px 20px rgba(0,0,0,0.12)",
-    animation: "slideUp 0.22s ease-out",
-  },
-  nodeRailOpenBtn: {
+  siblingPill: {
     display: "inline-flex", alignItems: "center", gap: 6,
     padding: "6px 12px", borderRadius: 999,
     background: "var(--paper-mid)", border: "1px solid var(--paper-dark)",
-    fontFamily: "'DM Mono', monospace", fontSize: 11,
-    color: "var(--ink-mid)", cursor: "pointer",
+    color: "var(--ink-mid)", fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" as const,
+    flexShrink: 0, transition: "background 0.12s, border-color 0.12s, color 0.12s",
+  },
+  siblingPillActive: {
+    background: "var(--leaf)", borderColor: "var(--leaf-border)",
+    color: "var(--forest)", fontWeight: 600,
+  },
+  siblingStripLabel: {
+    fontFamily: "'DM Mono', monospace", fontSize: 10,
+    color: "var(--ink-light)", textTransform: "uppercase" as const,
+    letterSpacing: "0.08em", flexShrink: 0, marginRight: 4,
   },
 };
