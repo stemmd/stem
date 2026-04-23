@@ -164,28 +164,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
           }
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-          }
-          @keyframes slideUp {
-            from { transform: translateY(24px); opacity: 0; }
-            to   { transform: translateY(0); opacity: 1; }
-          }
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.4; }
           }
 
-          /* Zoom motion for entering / leaving a stem level */
-          @keyframes zoomEnterIn {
-            from { opacity: 0; transform: scale(0.94); }
-            to   { opacity: 1; transform: scale(1); }
-          }
-          @keyframes zoomEnterOut {
-            from { opacity: 0; transform: scale(1.06); }
-            to   { opacity: 1; transform: scale(1); }
-          }
         `}</style>
       </head>
       <body>

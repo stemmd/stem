@@ -596,38 +596,6 @@ export const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
   },
 
-  // ── Sibling row (table-of-contents style, no pill chrome) ───────────────
-  siblingRow: {
-    display: "flex", alignItems: "baseline", gap: 10,
-    flexWrap: "wrap" as const, marginBottom: 24,
-    maxWidth: 720,
-  },
-  siblingRowLabel: {
-    fontFamily: "'DM Mono', monospace", fontSize: 11,
-    color: "var(--ink-light)", textTransform: "uppercase" as const,
-    letterSpacing: "0.08em", flexShrink: 0,
-  },
-  siblingInline: {
-    display: "inline-flex", alignItems: "center", gap: 4,
-    padding: 0, background: "none", border: "none",
-    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    color: "var(--ink-light)", cursor: "pointer",
-    textDecoration: "none", whiteSpace: "nowrap" as const,
-    transition: "color 0.12s",
-  },
-  siblingInlineActive: {
-    display: "inline-flex", alignItems: "center", gap: 5,
-    padding: "3px 10px", background: "var(--leaf)",
-    border: "none", borderRadius: 999,
-    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    color: "var(--forest)", fontWeight: 600,
-    cursor: "default", whiteSpace: "nowrap" as const,
-  },
-  siblingInlineSep: {
-    fontFamily: "'DM Mono', monospace", fontSize: 12,
-    color: "var(--ink-light)", opacity: 0.6, padding: "0 2px",
-  },
-
   // ── Density gear + popover (owner-only, unobtrusive) ────────────────────
   densityGear: {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
