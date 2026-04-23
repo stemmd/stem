@@ -4,6 +4,7 @@ import { extractYouTubeId, formatRelative, getDomain } from "~/lib/utils";
 import { track } from "~/lib/analytics";
 import { styles } from "./stem-styles";
 import type { Artifact } from "./types";
+import type { Density } from "./useDensity";
 
 export const ARTIFACT_TYPES: { value: string; label: string; emoji: string }[] = [
   { value: "article", label: "Article", emoji: "📄" },
@@ -35,6 +36,7 @@ export function ArtifactCard({
   currentUserId,
   stemUsername,
   nodeNames,
+  density = "airy",
 }: {
   artifact: Artifact;
   stemId: string;
@@ -42,6 +44,7 @@ export function ArtifactCard({
   currentUserId: string | undefined;
   stemUsername: string;
   nodeNames?: string[];
+  density?: Density;
 }) {
   const deleteFetcher = useFetcher();
   const editFetcher = useFetcher<{ success?: boolean; error?: string }>();
@@ -56,6 +59,7 @@ export function ArtifactCard({
   const [editNote, setEditNote] = useState(artifact.note ?? "");
   const [editQuote, setEditQuote] = useState(artifact.quote ?? "");
   const [editType, setEditType] = useState(artifact.source_type);
+  const [hovered, setHovered] = useState(false);
 
   // Close edit panel after save
   useEffect(() => {
@@ -73,6 +77,60 @@ export function ArtifactCard({
   const embedId = !isNote && !isFileUpload && artifact.embed_url ? null : (!isNote && !isFileUpload && artifact.source_type === "youtube" && artifact.url ? extractYouTubeId(artifact.url) : null);
   const embedUrl = !isNote && !isFileUpload ? (artifact.embed_url || (embedId ? `https://www.youtube.com/embed/${embedId}` : null)) : null;
   const typeInfo = artifactTypeLabel(artifact.source_type);
+
+  // ── Dense render: single-row compact with hover-reveal ──
+  if (density === "dense") {
+    const displayTitle = artifact.title || (isNote ? (artifact.body ?? "").slice(0, 80) : null) || artifact.url || "Untitled";
+    const hoverContent = artifact.note || artifact.quote || (isNote ? artifact.body : null);
+    const href = isNote ? undefined : (isFileUpload ? `https://api.stem.md/files/${artifact.file_key}` : artifact.url) ?? undefined;
+    const Tag = href ? "a" : "div";
+    return (
+      <div
+        style={{ position: "relative", minWidth: 0, flex: 1 }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div style={styles.artifactCardCompact}>
+          <span style={styles.artifactCardCompactType} title={typeInfo.label}>{typeInfo.emoji}</span>
+          <Tag
+            {...(href ? { href, target: "_blank", rel: "noopener noreferrer" } : {})}
+            draggable={false}
+            style={{ ...styles.artifactCardCompactTitle, cursor: href ? "pointer" : "default" }}
+            onClick={href ? () => track("open_link", { stem_id: stemId, artifact_id: artifact.id }) : undefined}
+          >
+            {displayTitle}
+          </Tag>
+          {domain && (
+            <span style={styles.artifactCardCompactDomain}>
+              {artifact.favicon_url && (
+                <img src={artifact.favicon_url} alt="" draggable={false} style={{ width: 11, height: 11, flexShrink: 0 }} />
+              )}
+              {domain}
+            </span>
+          )}
+          {canEdit && (
+            <deleteFetcher.Form method="post" style={{ flexShrink: 0 }}>
+              <input type="hidden" name="intent" value="delete_artifact" />
+              <input type="hidden" name="artifactId" value={artifact.id} />
+              <button type="submit" style={{ ...styles.deleteBtn, padding: "0 2px" }} title="Remove artifact">×</button>
+            </deleteFetcher.Form>
+          )}
+        </div>
+        {hovered && hoverContent && (
+          <div style={styles.artifactCardCompactHover}>
+            {artifact.quote ? `"${artifact.quote}"` : hoverContent}
+          </div>
+        )}
+        {nodeNames && nodeNames.length > 0 && (
+          <div style={{ ...styles.alsoInRow, marginTop: 4, paddingLeft: 12 }}>
+            {nodeNames.map((name) => (
+              <span key={name} style={styles.alsoInTag}>{name}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const formatBytes = (bytes: number | null) => {
     if (!bytes) return "";

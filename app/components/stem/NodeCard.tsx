@@ -1,4 +1,5 @@
 import type { Node } from "./types";
+import type { Density } from "./useDensity";
 
 /**
  * NodeCard renders a node as a compact card on the organic stem.
@@ -7,20 +8,33 @@ import type { Node } from "./types";
 export function NodeCard({
   node,
   artifactCount,
+  density = "airy",
   onClick,
-  dropHint,
 }: {
   node: Node;
   artifactCount: number;
+  density?: Density;
   onClick: () => void;
-  dropHint?: boolean;
 }) {
+  const cardStyle: React.CSSProperties = {
+    ...nodeCardStyles.card,
+    ...(density === "medium" ? nodeCardStyles.cardMedium : null),
+    ...(density === "dense" ? nodeCardStyles.cardDense : null),
+  };
+
+  if (density === "dense") {
+    return (
+      <button onClick={onClick} style={cardStyle} title={`Explore ${node.title}`}>
+        {node.emoji && <span style={nodeCardStyles.emojiDense}>{node.emoji}</span>}
+        <span style={nodeCardStyles.titleDense}>{node.title}</span>
+        <span style={nodeCardStyles.count}>{artifactCount}</span>
+        <span style={nodeCardStyles.arrow}>{"\u2192"}</span>
+      </button>
+    );
+  }
+
   return (
-    <button
-      onClick={onClick}
-      style={nodeCardStyles.card}
-      title={`Explore ${node.title}`}
-    >
+    <button onClick={onClick} style={cardStyle} title={`Explore ${node.title}`}>
       <div style={nodeCardStyles.header}>
         {node.emoji && <span style={nodeCardStyles.emoji}>{node.emoji}</span>}
         <span style={nodeCardStyles.title}>{node.title}</span>
@@ -52,6 +66,18 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     transition: "transform 0.15s ease, box-shadow 0.15s ease",
     fontFamily: "'DM Sans', sans-serif",
   },
+  cardMedium: {
+    maxWidth: 340,
+    padding: "11px 14px",
+    gap: 4,
+  },
+  cardDense: {
+    maxWidth: 300,
+    padding: "8px 12px",
+    gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   header: {
     display: "flex",
     alignItems: "center",
@@ -61,9 +87,23 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     fontSize: 20,
     flexShrink: 0,
   },
+  emojiDense: {
+    fontSize: 14,
+    flexShrink: 0,
+  },
   title: {
     fontWeight: 600,
     fontSize: 15,
+    color: "var(--ink)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    flex: 1,
+    minWidth: 0,
+  },
+  titleDense: {
+    fontWeight: 600,
+    fontSize: 13,
     color: "var(--ink)",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -80,10 +120,12 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Mono', monospace",
     fontSize: 12,
     color: "var(--ink-light)",
+    flexShrink: 0,
   },
   arrow: {
     fontSize: 14,
     color: "var(--forest)",
     opacity: 0.6,
+    flexShrink: 0,
   },
 };

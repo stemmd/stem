@@ -164,9 +164,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
           }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { transform: translateY(24px); opacity: 0; }
+            to   { transform: translateY(0); opacity: 1; }
+          }
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.4; }
+          }
+
+          /* View Transitions for node focus (gracefully ignored in unsupported browsers) */
+          ::view-transition-old(stem-focus-panel),
+          ::view-transition-new(stem-focus-panel) {
+            animation-duration: 220ms;
+            animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
           }
         `}</style>
       </head>
