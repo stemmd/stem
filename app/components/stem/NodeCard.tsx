@@ -75,9 +75,8 @@ export function NodeCard({
 
 const nodeCardStyles: Record<string, React.CSSProperties> = {
   card: {
-    flex: 1,
+    width: "100%",
     minWidth: 0,
-    maxWidth: 380,
     display: "flex",
     flexDirection: "column",
     gap: 8,
@@ -89,14 +88,13 @@ const nodeCardStyles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     transition: "border-color 0.15s, box-shadow 0.15s, transform 0.15s",
     fontFamily: "'DM Sans', sans-serif",
+    boxSizing: "border-box" as const,
   },
   cardMedium: {
-    maxWidth: 340,
     padding: "11px 14px",
     gap: 6,
   },
   cardDense: {
-    maxWidth: 300,
     padding: "8px 12px",
     gap: 8,
     flexDirection: "row",
