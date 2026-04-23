@@ -78,6 +78,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             --cat-education:#eae8f2; --cat-engineering:#eaeef0; --cat-environment:#e4f2ea;
             --cat-fashion:#f5e8f0; --cat-finance:#f0ede4; --cat-gaming:#e8e4f5;
             --cat-law:#eceae4; --cat-medicine:#e4f0ee; --cat-travel:#e8f0f5;
+
+            /* Subtle paper grain — dark dots for the light palette */
+            --paper-texture: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
           }
 
           @media (prefers-color-scheme: dark) {
@@ -105,6 +108,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               --cat-education:#201e28; --cat-engineering:#20262a; --cat-environment:#1e2a20;
               --cat-fashion:#2a2028; --cat-finance:#28251e; --cat-gaming:#1e1e30;
               --cat-law:#24221e; --cat-medicine:#1e2826; --cat-travel:#1e2830;
+
+              /* Paper grain for dark palette — light dots on deep paper */
+              --paper-texture: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
             }
           }
           [data-theme="dark"] {
@@ -127,11 +133,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
             --cat-politics:#202820; --cat-psychology:#282028; --cat-science:#1e2828;
             --cat-space:#1e2030; --cat-sport:#28251e; --cat-technology:#202428;
             --cat-urbanism:#26221e;
+
+            --paper-texture: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
           }
 
           html, body {
             height: 100%;
-            background: var(--paper);
+            background-color: var(--paper);
+            background-image: var(--paper-texture);
+            background-repeat: repeat;
             color: var(--ink);
             font-family: 'DM Sans', sans-serif;
             font-size: 16px;

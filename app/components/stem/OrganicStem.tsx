@@ -1,13 +1,48 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { Artifact, Node } from "./types";
 import { styles } from "./stem-styles";
-import { ArtifactCard } from "./ArtifactCard";
-import { NodeCard } from "./NodeCard";
+import { ArtifactCard, artifactTypeLabel } from "./ArtifactCard";
+import { NodeCard, type NodePreviewItem } from "./NodeCard";
 import { AddNodeForm } from "./AddNodeForm";
 import { AddArtifactForm } from "./AddArtifactForm";
 import { DragProvider, useDragContext } from "./DragContext";
 import { FloatingAddButton } from "./FloatingAddButton";
 import { useDensity, type Density } from "./useDensity";
+
+/** Build a small hover-preview list of the first few items inside a node. */
+function buildNodePreview(
+  nodeId: string,
+  childNodesMap: Map<string, Node[]>,
+  nodeToArtifacts: Map<string, string[]>,
+  artifactsById: Map<string, Artifact>,
+  nodesById: Map<string, Node>,
+  limit = 3,
+): NodePreviewItem[] {
+  const entries: { id: string; type: "node" | "artifact"; position: number }[] = [];
+  for (const child of childNodesMap.get(nodeId) || []) {
+    entries.push({ id: child.id, type: "node", position: child.position });
+  }
+  for (const artId of nodeToArtifacts.get(nodeId) || []) {
+    const a = artifactsById.get(artId);
+    if (!a) continue;
+    entries.push({ id: artId, type: "artifact", position: a.stem_position ?? 999999 });
+  }
+  entries.sort((a, b) => a.position - b.position);
+  return entries.slice(0, limit).map((e) => {
+    if (e.type === "node") {
+      const n = nodesById.get(e.id)!;
+      return { id: e.id, type: "node" as const, title: n.title, icon: n.emoji || "\u25C6" };
+    }
+    const a = artifactsById.get(e.id)!;
+    const info = artifactTypeLabel(a.source_type);
+    return {
+      id: e.id,
+      type: "artifact" as const,
+      title: a.title || a.url || "Untitled",
+      icon: info.emoji,
+    };
+  });
+}
 
 /**
  * A single item on a stem level — either a node or an artifact.
@@ -297,7 +332,11 @@ function StemBranchItem({
     const node = nodesById.get(item.id);
     if (!node) return null;
     const isExpanded = expanded.has(node.id);
-    const childCount = (nodeToArtifacts.get(node.id) || []).length;
+    const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
+    const subNodeCount = (shared.childNodesMap.get(node.id) || []).length;
+    const previewItems = buildNodePreview(
+      node.id, shared.childNodesMap, shared.nodeToArtifacts, shared.artifactsById, shared.nodesById,
+    );
 
     return (
       <div
@@ -318,7 +357,7 @@ function StemBranchItem({
           style={{
             ...organicStyles.connectorWrap,
             flexDirection: side === "left" && !isMobile ? "row-reverse" : "row",
-            marginTop: 18, // align roughly with the card's first-line vertical center
+            marginTop: 22,
           }}
         >
           <div style={dotStyle} />
@@ -330,7 +369,9 @@ function StemBranchItem({
         >
           <NodeCard
             node={node}
-            artifactCount={childCount}
+            artifactCount={artifactCount}
+            subNodeCount={subNodeCount}
+            previewItems={previewItems}
             density={shared.density}
             expanded={isExpanded}
             onClick={() => shared.toggleExpand(node.id)}
@@ -403,12 +444,18 @@ function LinearItem({
     const node = nodesById.get(item.id);
     if (!node) return null;
     const isExpanded = expanded.has(node.id);
-    const childCount = (nodeToArtifacts.get(node.id) || []).length;
+    const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
+    const subNodeCount = (shared.childNodesMap.get(node.id) || []).length;
+    const previewItems = buildNodePreview(
+      node.id, shared.childNodesMap, shared.nodeToArtifacts, shared.artifactsById, shared.nodesById,
+    );
     return (
       <div data-node-anchor={node.id} data-node-drop={node.id} style={{ width: "100%", maxWidth: cardMaxWidth, display: "flex", flexDirection: "column" }}>
         <NodeCard
           node={node}
-          artifactCount={childCount}
+          artifactCount={artifactCount}
+          subNodeCount={subNodeCount}
+          previewItems={previewItems}
           density={shared.density}
           expanded={isExpanded}
           onClick={() => shared.toggleExpand(node.id)}
@@ -519,12 +566,18 @@ function ExpandedItem({
     const node = nodesById.get(item.id);
     if (!node) return null;
     const isExpanded = expanded.has(node.id);
-    const childCount = (nodeToArtifacts.get(node.id) || []).length;
+    const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
+    const subNodeCount = (shared.childNodesMap.get(node.id) || []).length;
+    const previewItems = buildNodePreview(
+      node.id, shared.childNodesMap, shared.nodeToArtifacts, shared.artifactsById, shared.nodesById,
+    );
     return (
       <div data-node-anchor={node.id} data-node-drop={node.id} style={{ display: "flex", flexDirection: "column" }}>
         <NodeCard
           node={node}
-          artifactCount={childCount}
+          artifactCount={artifactCount}
+          subNodeCount={subNodeCount}
+          previewItems={previewItems}
           density={shared.density}
           expanded={isExpanded}
           onClick={() => shared.toggleExpand(node.id)}
