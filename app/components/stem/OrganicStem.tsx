@@ -10,8 +10,7 @@ import { FloatingAddButton } from "./FloatingAddButton";
 import { useDensity, type Density } from "./useDensity";
 
 /**
- * A single item on the stem — either a node or an artifact.
- * Used to create the unified, interleaved display.
+ * A single item on a stem level — either a node or an artifact.
  */
 interface StemItem {
   id: string;
@@ -20,6 +19,17 @@ interface StemItem {
   side: number; // 0 = auto, 1 = left, 2 = right
 }
 
+type TransitionDirection = "in" | "out";
+
+/**
+ * OrganicStem is the recursive surface of the stem page.
+ *
+ * The root stem and every node use the same layout grammar: a trunk
+ * when there's enough to branch between (>= 4 items on the level),
+ * or a quiet linear stack when there isn't. Navigating into a node
+ * replaces the current level's render with the node's — no panel,
+ * no takeover, just a change of "where you are."
+ */
 export function OrganicStem({
   stemId,
   childNodesMap,
@@ -53,8 +63,8 @@ export function OrganicStem({
   contributionMode: string;
   canUpload: boolean;
 }) {
-  const [focusedNodeStack, setFocusedNodeStack] = useState<string[]>([]);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [focusedStack, setFocusedStack] = useState<string[]>([]);
+  const [direction, setDirection] = useState<TransitionDirection>("in");
   const isMobile = useMediaQuery("(max-width: 680px)");
 
   const totalItemCount =
@@ -62,56 +72,17 @@ export function OrganicStem({
     Array.from(nodeToArtifacts.values()).reduce((sum, arr) => sum + arr.length, 0);
 
   const { density, override, setOverride } = useDensity(stemId, totalItemCount);
-  // On mobile we default to at least `medium` density to reclaim vertical space.
   const effectiveDensity: Density = isMobile && density === "airy" ? "medium" : density;
 
-  const focusedNodeId = focusedNodeStack.length > 0 ? focusedNodeStack[focusedNodeStack.length - 1] : null;
-
-  // Build a unified, position-sorted list of root items (nodes + root artifacts)
-  const stemItems = useMemo(() => {
-    const items: StemItem[] = [];
-
-    for (const node of rootNodes) {
-      items.push({
-        id: node.id,
-        type: "node",
-        position: node.position,
-        side: node.stem_side ?? 0,
-      });
-    }
-
-    for (const artifact of rootArtifacts) {
-      items.push({
-        id: artifact.id,
-        type: "artifact",
-        position: artifact.stem_position ?? 999999,
-        side: artifact.stem_side ?? 0,
-      });
-    }
-
-    items.sort((a, b) => a.position - b.position);
-    return items;
-  }, [rootNodes, rootArtifacts]);
-
-  const getItemSide = useCallback(
-    (item: StemItem, index: number): "left" | "right" => {
-      if (item.side === 1) return "left";
-      if (item.side === 2) return "right";
-      return index % 2 === 0 ? "right" : "left";
-    },
-    []
+  const nodesById = useMemo(
+    () => new Map(approvedNodes.map((n) => [n.id, n])),
+    [approvedNodes]
   );
 
-  // Run a state update inside a View Transition when supported.
-  const runTransition = useCallback((update: () => void) => {
-    if (typeof document === "undefined" || !("startViewTransition" in document)) {
-      update();
-      return;
-    }
-    (document as unknown as { startViewTransition: (cb: () => void) => void })
-      .startViewTransition(update);
-  }, []);
+  const currentNodeId = focusedStack.length > 0 ? focusedStack[focusedStack.length - 1] : null;
+  const currentNode = currentNodeId ? nodesById.get(currentNodeId) ?? null : null;
 
+  // ── Navigation actions ──────────────────────────────────────────────────
   const updateHash = useCallback((nodeId: string | null) => {
     if (typeof window === "undefined") return;
     const url = nodeId
@@ -120,57 +91,40 @@ export function OrganicStem({
     window.history.replaceState(null, "", url);
   }, []);
 
-  const focusNode = useCallback((nodeId: string) => {
-    runTransition(() => {
-      setFocusedNodeStack((prev) => {
-        const existingIdx = prev.indexOf(nodeId);
-        const next = existingIdx >= 0 ? prev.slice(0, existingIdx + 1) : [...prev, nodeId];
-        updateHash(nodeId);
-        return next;
-      });
+  const diveInto = useCallback((nodeId: string) => {
+    setDirection("in");
+    setFocusedStack((prev) => {
+      const existingIdx = prev.indexOf(nodeId);
+      const next = existingIdx >= 0 ? prev.slice(0, existingIdx + 1) : [...prev, nodeId];
+      updateHash(nodeId);
+      return next;
     });
-  }, [runTransition, updateHash]);
+  }, [updateHash]);
 
-  // Jump to a sibling at the same level — replaces the last entry in the stack.
   const jumpToSibling = useCallback((nodeId: string) => {
-    runTransition(() => {
-      setFocusedNodeStack((prev) => {
-        const next = prev.length > 0 ? [...prev.slice(0, -1), nodeId] : [nodeId];
-        updateHash(nodeId);
-        return next;
-      });
+    setDirection("out");
+    setFocusedStack((prev) => {
+      const next = prev.length > 0 ? [...prev.slice(0, -1), nodeId] : [nodeId];
+      updateHash(nodeId);
+      return next;
     });
-  }, [runTransition, updateHash]);
+  }, [updateHash]);
 
-  // Jump to a specific ancestor via the breadcrumb.
   const jumpToAncestor = useCallback((stackIndex: number) => {
-    runTransition(() => {
-      setFocusedNodeStack((prev) => {
-        const next = prev.slice(0, stackIndex + 1);
-        const lastId = next.length > 0 ? next[next.length - 1] : null;
-        updateHash(lastId);
-        return next;
-      });
+    setDirection("out");
+    setFocusedStack((prev) => {
+      const next = prev.slice(0, stackIndex + 1);
+      const lastId = next.length > 0 ? next[next.length - 1] : null;
+      updateHash(lastId);
+      return next;
     });
-  }, [runTransition, updateHash]);
+  }, [updateHash]);
 
-  const unfocusToRoot = useCallback(() => {
-    runTransition(() => {
-      setFocusedNodeStack([]);
-      updateHash(null);
-    });
-  }, [runTransition, updateHash]);
-
-  const unfocusOne = useCallback(() => {
-    runTransition(() => {
-      setFocusedNodeStack((prev) => {
-        const next = prev.slice(0, -1);
-        const lastId = next.length > 0 ? next[next.length - 1] : null;
-        updateHash(lastId);
-        return next;
-      });
-    });
-  }, [runTransition, updateHash]);
+  const jumpToRoot = useCallback(() => {
+    setDirection("out");
+    setFocusedStack([]);
+    updateHash(null);
+  }, [updateHash]);
 
   // Initialize from URL hash on mount
   useEffect(() => {
@@ -179,85 +133,104 @@ export function OrganicStem({
     if (hash.startsWith("#node-")) {
       const nodeId = hash.slice(6);
       if (approvedNodes.some((n) => n.id === nodeId)) {
-        setFocusedNodeStack([nodeId]);
+        setFocusedStack([nodeId]);
       }
     }
   }, [approvedNodes]);
 
-  // Esc handler — unfocus one level
+  // Esc handler — go up one level
   useEffect(() => {
-    if (focusedNodeStack.length === 0) return;
+    if (focusedStack.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        unfocusOne();
+        setDirection("out");
+        setFocusedStack((prev) => {
+          const next = prev.slice(0, -1);
+          const lastId = next.length > 0 ? next[next.length - 1] : null;
+          updateHash(lastId);
+          return next;
+        });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [focusedNodeStack.length, unfocusOne]);
+  }, [focusedStack.length, updateHash]);
 
-  const nodesById = useMemo(
-    () => new Map(approvedNodes.map((n) => [n.id, n])),
-    [approvedNodes]
-  );
+  // ── Current level data ──────────────────────────────────────────────────
+  const levelChildNodes = currentNode
+    ? (childNodesMap.get(currentNode.id) || [])
+    : rootNodes;
 
-  const focusedNode = focusedNodeId ? nodesById.get(focusedNodeId) ?? null : null;
-  const focusedNodeArtifacts = focusedNodeId
-    ? (nodeToArtifacts.get(focusedNodeId) || [])
+  const levelArtifacts = useMemo(() => {
+    if (currentNode) {
+      return (nodeToArtifacts.get(currentNode.id) || [])
         .map((id) => artifactsById.get(id))
-        .filter(Boolean) as Artifact[]
-    : [];
-  const focusedNodeChildren = focusedNodeId ? (childNodesMap.get(focusedNodeId) || []) : [];
+        .filter(Boolean) as Artifact[];
+    }
+    return rootArtifacts;
+  }, [currentNode, nodeToArtifacts, artifactsById, rootArtifacts]);
 
-  // Siblings of the focused node (share a parent, or are root-level peers).
+  const stemItems = useMemo(() => {
+    const items: StemItem[] = [];
+    for (const node of levelChildNodes) {
+      items.push({ id: node.id, type: "node", position: node.position, side: node.stem_side ?? 0 });
+    }
+    for (const artifact of levelArtifacts) {
+      items.push({
+        id: artifact.id, type: "artifact",
+        position: artifact.stem_position ?? 999999,
+        side: artifact.stem_side ?? 0,
+      });
+    }
+    items.sort((a, b) => a.position - b.position);
+    return items;
+  }, [levelChildNodes, levelArtifacts]);
+
+  // ── Siblings + breadcrumbs ──────────────────────────────────────────────
   const siblings = useMemo(() => {
-    if (!focusedNode) return [] as Node[];
-    if (focusedNode.parent_id) {
-      return childNodesMap.get(focusedNode.parent_id) || [];
+    if (!currentNode) return [] as Node[];
+    if (currentNode.parent_id) {
+      return childNodesMap.get(currentNode.parent_id) || [];
     }
     return rootNodes;
-  }, [focusedNode, childNodesMap, rootNodes]);
+  }, [currentNode, childNodesMap, rootNodes]);
 
-  // Ancestor-path breadcrumb (skips the focused node itself — that's the page title).
+  // Breadcrumb = path of ancestors, NOT including the current node.
   const breadcrumbs = useMemo(() => {
-    return focusedNodeStack.slice(0, -1).map((id) => {
+    return focusedStack.slice(0, -1).map((id) => {
       const node = nodesById.get(id);
       return { id, title: node?.title ?? "", emoji: node?.emoji ?? "" };
     });
-  }, [focusedNodeStack, nodesById]);
+  }, [focusedStack, nodesById]);
 
   const dragItems = useMemo(
     () => stemItems.map((item) => ({ id: item.id, type: item.type })),
     [stemItems]
   );
 
-  // Empty state (visitor)
-  if (stemItems.length === 0 && !isOwner) {
-    return (
-      <p style={styles.empty}>
-        No artifacts yet.
-      </p>
-    );
-  }
-
-  const isFocused = !!focusedNode;
-
+  // ── Layout params ───────────────────────────────────────────────────────
+  const useTrunk = stemItems.length >= 4;
   const rowGap = effectiveDensity === "dense" ? 10 : effectiveDensity === "medium" ? 16 : 28;
   const junctionDotSize = isMobile ? 6 : effectiveDensity === "dense" ? 7 : 10;
   const connectorWidth = isMobile ? 20 : effectiveDensity === "dense" ? 28 : 40;
   const cardMaxWidth = effectiveDensity === "dense" ? 300 : effectiveDensity === "medium" ? 340 : 380;
 
-  const gridColumns = isMobile ? "4px 1fr" : "1fr 4px 1fr";
+  // Empty state (visitor on a fresh stem)
+  if (stemItems.length === 0 && !isOwner && !currentNode) {
+    return <p style={styles.empty}>No artifacts yet.</p>;
+  }
+
+  const levelKey = currentNodeId ?? "__root__";
 
   return (
     <DragProvider stemId={stemId} items={dragItems} isOwner={isOwner}>
       <div style={organicStyles.wrapper}>
 
-        {/* Density toggle (owner only). Hidden while focused — focus mode has its own chrome. */}
-        {isOwner && !isFocused && (
-          <div style={organicStyles.toolbar}>
-            <DensityToggle
+        {/* Owner: density gear (top-right, unobtrusive) */}
+        {isOwner && (
+          <div style={organicStyles.gearRow}>
+            <DensityGear
               current={override ?? density}
               auto={override === null}
               onChange={(value) => setOverride(value)}
@@ -265,182 +238,148 @@ export function OrganicStem({
           </div>
         )}
 
-        {/* ── Stem root view ─────────────────────────────────────────────── */}
-        {!isFocused && (
-          <div
-            ref={gridRef}
-            data-stem-grid
-            style={{
-              ...organicStyles.grid,
-              gridTemplateColumns: gridColumns,
-              gap: `${rowGap}px 0`,
-              viewTransitionName: "stem-trunk",
-            }}
-          >
-            {stemItems.length > 0 && (
-              <div
-                style={{
-                  ...organicStyles.trunk,
-                  gridColumn: isMobile ? "1" : "2",
-                  gridRow: `1 / ${stemItems.length + 2}`,
-                }}
-              />
-            )}
+        {/* ── Current level (keyed so it re-mounts + animates on navigate) ── */}
+        <div
+          key={levelKey}
+          style={{
+            ...organicStyles.level,
+            animation: `${direction === "in" ? "zoomEnterIn" : "zoomEnterOut"} 220ms ease-out`,
+          }}
+        >
 
-            {stemItems.map((item, index) => (
-              <StemBranchItem
-                key={item.id}
-                item={item}
-                index={index}
-                isMobile={isMobile}
-                side={getItemSide(item, index)}
-                isOwner={isOwner}
-                density={effectiveDensity}
-                junctionDotSize={junctionDotSize}
-                connectorWidth={connectorWidth}
-                cardMaxWidth={cardMaxWidth}
-                nodesById={nodesById}
-                nodeToArtifacts={nodeToArtifacts}
-                artifactsById={artifactsById}
-                artifactToNodes={artifactToNodes}
-                stemId={stemId}
-                stemUserId={stemUserId}
-                stemUsername={stemUsername}
-                currentUserId={currentUserId}
-                onNodeClick={focusNode}
-              />
-            ))}
-
-            {stemItems.length === 0 && isOwner && (
-              <div style={{ gridColumn: "1 / -1", gridRow: 1, textAlign: "center", padding: "60px 20px" }}>
-                <p style={styles.empty}>Add your first node or artifact to start growing your stem</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Focused node panel ─────────────────────────────────────────── */}
-        {isFocused && focusedNode && (
-          <div
-            style={{
-              ...organicStyles.focusPanel,
-              viewTransitionName: "stem-focus-panel",
-              padding: isMobile ? "0 16px" : "0 32px",
-            }}
-          >
-            {/* Back + ancestor breadcrumb */}
-            <div style={organicStyles.breadcrumbRow}>
+          {/* Breadcrumb — ancestor path, not shown at root */}
+          {breadcrumbs.length >= 0 && currentNode && (
+            <nav style={organicStyles.breadcrumb} aria-label="Location">
               <button
                 type="button"
-                onClick={unfocusToRoot}
-                style={organicStyles.backBtn}
+                onClick={jumpToRoot}
+                style={organicStyles.breadcrumbLink}
               >
-                {"\u2190"} Back to stem
+                {"\u2190"} Stem
               </button>
-              {breadcrumbs.length > 0 && (
-                <div style={organicStyles.breadcrumb}>
-                  {breadcrumbs.map((crumb, i) => (
-                    <span key={crumb.id} style={organicStyles.breadcrumbItem}>
-                      <span style={organicStyles.breadcrumbSep}>/</span>
-                      <button
-                        onClick={() => jumpToAncestor(i)}
-                        style={organicStyles.breadcrumbLink}
-                      >
-                        {crumb.emoji && `${crumb.emoji} `}{crumb.title}
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+              {breadcrumbs.map((crumb, i) => (
+                <span key={crumb.id} style={organicStyles.breadcrumbItem}>
+                  <span style={organicStyles.breadcrumbSep}>/</span>
+                  <button
+                    type="button"
+                    onClick={() => jumpToAncestor(i)}
+                    style={organicStyles.breadcrumbLink}
+                  >
+                    {crumb.emoji && `${crumb.emoji} `}{crumb.title}
+                  </button>
+                </span>
+              ))}
+            </nav>
+          )}
 
-            {/* Sibling strip — only when there's something to jump to */}
-            {siblings.length > 1 && (
-              <SiblingStrip
-                siblings={siblings}
-                currentId={focusedNode.id}
-                onSelect={jumpToSibling}
-              />
-            )}
+          {/* Sibling row — only when there's something to pick between */}
+          {currentNode && siblings.length > 1 && (
+            <SiblingRow
+              parentLabel={
+                currentNode.parent_id
+                  ? (nodesById.get(currentNode.parent_id)?.title ?? "")
+                  : "at this level"
+              }
+              siblings={siblings}
+              currentId={currentNode.id}
+              onSelect={jumpToSibling}
+            />
+          )}
 
-            {/* Node header */}
-            <div style={{ marginBottom: 32 }}>
-              {focusedNode.emoji && (
-                <span style={{ fontSize: 32, marginBottom: 8, display: "block" }}>{focusedNode.emoji}</span>
+          {/* Node header (only inside a node; root's header lives outside OrganicStem) */}
+          {currentNode && (
+            <header style={organicStyles.nodeHeader}>
+              {currentNode.emoji && (
+                <span style={organicStyles.nodeHeaderEmoji}>{currentNode.emoji}</span>
               )}
-              <h2 style={organicStyles.focusedTitle}>{focusedNode.title}</h2>
-              {focusedNode.description && (
-                <p style={organicStyles.focusedDesc}>{focusedNode.description}</p>
+              <h2 style={organicStyles.nodeHeaderTitle}>{currentNode.title}</h2>
+              {currentNode.description && (
+                <p style={organicStyles.nodeHeaderDesc}>{currentNode.description}</p>
               )}
-              <span style={organicStyles.focusedCount}>
-                {focusedNodeArtifacts.length} {focusedNodeArtifacts.length === 1 ? "artifact" : "artifacts"}
-                {focusedNodeChildren.length > 0 && ` · ${focusedNodeChildren.length} sub-${focusedNodeChildren.length === 1 ? "node" : "nodes"}`}
+              <span style={organicStyles.nodeHeaderCount}>
+                {levelArtifacts.length} {levelArtifacts.length === 1 ? "artifact" : "artifacts"}
+                {levelChildNodes.length > 0 && ` · ${levelChildNodes.length} sub-${levelChildNodes.length === 1 ? "node" : "nodes"}`}
               </span>
-            </div>
+            </header>
+          )}
 
-            {/* Mini organic trunk for this node's items */}
-            <div style={{
-              ...organicStyles.grid,
-              gridTemplateColumns: isMobile ? "4px 1fr" : "1fr 4px 1fr",
-              maxWidth: 700,
-              gap: `${rowGap}px 0`,
-            }}>
-              {(focusedNodeArtifacts.length > 0 || focusedNodeChildren.length > 0) && (
-                <div style={{
-                  ...organicStyles.trunk,
-                  gridColumn: isMobile ? "1" : "2",
-                  gridRow: `1 / ${focusedNodeArtifacts.length + focusedNodeChildren.length + 2}`,
-                }} />
-              )}
+          {/* Trunk or linear list */}
+          {useTrunk ? (
+            <TrunkLevel
+              stemItems={stemItems}
+              isMobile={isMobile}
+              isOwner={isOwner}
+              density={effectiveDensity}
+              rowGap={rowGap}
+              junctionDotSize={junctionDotSize}
+              connectorWidth={connectorWidth}
+              cardMaxWidth={cardMaxWidth}
+              nodesById={nodesById}
+              nodeToArtifacts={nodeToArtifacts}
+              artifactsById={artifactsById}
+              artifactToNodes={artifactToNodes}
+              stemId={stemId}
+              stemUserId={stemUserId}
+              stemUsername={stemUsername}
+              currentUserId={currentUserId}
+              currentNodeId={currentNodeId}
+              onDive={diveInto}
+            />
+          ) : (
+            <LinearLevel
+              stemItems={stemItems}
+              isMobile={isMobile}
+              isOwner={isOwner}
+              density={effectiveDensity}
+              rowGap={rowGap}
+              cardMaxWidth={cardMaxWidth}
+              nodesById={nodesById}
+              nodeToArtifacts={nodeToArtifacts}
+              artifactsById={artifactsById}
+              artifactToNodes={artifactToNodes}
+              stemId={stemId}
+              stemUserId={stemUserId}
+              stemUsername={stemUsername}
+              currentUserId={currentUserId}
+              currentNodeId={currentNodeId}
+              onDive={diveInto}
+            />
+          )}
 
-              <FocusedNodeItems
-                artifacts={focusedNodeArtifacts}
-                childNodes={focusedNodeChildren}
-                isMobile={isMobile}
-                density={effectiveDensity}
-                junctionDotSize={junctionDotSize}
-                connectorWidth={connectorWidth}
-                cardMaxWidth={cardMaxWidth}
+          {stemItems.length === 0 && isOwner && (
+            <p style={{ ...styles.empty, padding: "40px 20px" }}>
+              {currentNode ? "Nothing here yet. Add a sub-node or artifact below." : "Add your first node or artifact to start growing your stem"}
+            </p>
+          )}
+
+          {stemItems.length === 0 && !isOwner && currentNode && (
+            <p style={{ ...styles.empty, padding: "40px 0" }}>No artifacts in this node yet.</p>
+          )}
+
+          {/* Contribute form (only inside a node — root's form lives above OrganicStem) */}
+          {currentNode && canContribute && (
+            <div style={{ maxWidth: 640, marginTop: 28, marginLeft: "auto", marginRight: "auto" }}>
+              <AddArtifactForm
                 stemId={stemId}
-                stemUserId={stemUserId}
-                currentUserId={currentUserId}
-                stemUsername={stemUsername}
-                focusedNodeId={focusedNodeId}
-                artifactToNodes={artifactToNodes}
-                nodeToArtifacts={nodeToArtifacts}
-                nodesById={nodesById}
                 isOwner={isOwner}
-                onNodeClick={focusNode}
+                stemUsername={stemUsername}
+                contributionMode={contributionMode}
+                canUpload={canUpload}
+                nodeId={currentNodeId}
               />
             </div>
+          )}
 
-            {focusedNodeArtifacts.length === 0 && focusedNodeChildren.length === 0 && !canContribute && (
-              <p style={{ ...styles.empty, padding: "40px 0" }}>No artifacts in this node yet.</p>
-            )}
+          {/* AddNode (owner, inside a node — root's AddNode form is above OrganicStem) */}
+          {currentNode && isOwner && (
+            <div style={{ marginTop: 16, maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
+              <AddNodeForm stemId={stemId} parentId={currentNodeId} />
+            </div>
+          )}
+        </div>
 
-            {canContribute && (
-              <div style={{ maxWidth: 640, marginTop: 24 }}>
-                <AddArtifactForm
-                  stemId={stemId}
-                  isOwner={isOwner}
-                  stemUsername={stemUsername}
-                  contributionMode={contributionMode}
-                  canUpload={canUpload}
-                  nodeId={focusedNodeId}
-                />
-              </div>
-            )}
-
-            {isOwner && (
-              <div style={{ marginTop: 20, maxWidth: 400 }}>
-                <AddNodeForm stemId={stemId} parentId={focusedNodeId} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Floating add button (owner, root view only) */}
-        {isOwner && !isFocused && (
+        {/* Floating add button (owner, root level only) */}
+        {isOwner && !currentNode && (
           <FloatingAddButton
             onAdd={() => {
               const main = document.querySelector("main");
@@ -453,44 +392,54 @@ export function OrganicStem({
   );
 }
 
-/** Sibling strip — horizontal pills for lateral navigation within a focus level. */
-function SiblingStrip({
+// ── Sibling row ─────────────────────────────────────────────────────────────
+
+function SiblingRow({
+  parentLabel,
   siblings,
   currentId,
   onSelect,
 }: {
+  parentLabel: string;
   siblings: Node[];
   currentId: string;
   onSelect: (nodeId: string) => void;
 }) {
   return (
-    <div style={styles.siblingStrip} aria-label="Sibling nodes">
-      <span style={styles.siblingStripLabel}>Also here</span>
-      {siblings.map((s) => {
+    <div style={styles.siblingRow} aria-label="Peer nodes">
+      <span style={styles.siblingRowLabel}>{parentLabel} ·</span>
+      {siblings.map((s, i) => {
         const active = s.id === currentId;
         return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => !active && onSelect(s.id)}
-            style={{
-              ...styles.siblingPill,
-              ...(active ? styles.siblingPillActive : null),
-              cursor: active ? "default" : "pointer",
-            }}
-            aria-current={active ? "page" : undefined}
-          >
-            {s.emoji && <span style={{ fontSize: 13, lineHeight: 1 }}>{s.emoji}</span>}
-            <span>{s.title}</span>
-          </button>
+          <span key={s.id} style={{ display: "inline-flex", alignItems: "baseline", gap: 4 }}>
+            {i > 0 && <span style={styles.siblingInlineSep}>·</span>}
+            {active ? (
+              <span style={styles.siblingInlineActive} aria-current="page">
+                {s.emoji && <span style={{ fontSize: 13, lineHeight: 1 }}>{s.emoji}</span>}
+                <span>{s.title}</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSelect(s.id)}
+                style={styles.siblingInline}
+                onMouseOver={(e) => (e.currentTarget.style.color = "var(--ink-mid)")}
+                onMouseOut={(e) => (e.currentTarget.style.color = "var(--ink-light)")}
+              >
+                {s.emoji && <span style={{ fontSize: 12, lineHeight: 1 }}>{s.emoji}</span>}
+                <span>{s.title}</span>
+              </button>
+            )}
+          </span>
         );
       })}
     </div>
   );
 }
 
-/** Density toggle (airy / medium / dense). */
-function DensityToggle({
+// ── Density gear + popover ─────────────────────────────────────────────────
+
+function DensityGear({
   current,
   auto,
   onChange,
@@ -499,156 +448,278 @@ function DensityToggle({
   auto: boolean;
   onChange: (value: Density | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && e.target instanceof HTMLElement && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("mousedown", onClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   const options: { value: Density; label: string; title: string }[] = [
     { value: "airy", label: "airy", title: "Roomy spacing, large cards" },
     { value: "medium", label: "medium", title: "Balanced density" },
     { value: "dense", label: "dense", title: "Compact, one-line cards" },
   ];
+
   return (
-    <div style={styles.densityToggleRow} title={auto ? "Density is auto — click to override" : "Density overridden — double-click a mode to reset"}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          style={{
-            ...styles.densityToggleBtn,
-            ...(current === opt.value ? styles.densityToggleBtnActive : null),
-          }}
-          title={opt.title}
-          onClick={() => onChange(opt.value)}
-          onDoubleClick={() => onChange(null)}
-        >
-          {opt.label}
-        </button>
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{ ...styles.densityGear, ...(open ? styles.densityGearActive : null) }}
+        title="Display density"
+        aria-label="Display density"
+      >
+        {"\u2699"}
+      </button>
+      {open && (
+        <div style={styles.densityPopover} role="menu">
+          <span style={styles.densityPopoverLabel}>Density</span>
+          <div style={styles.densityToggleRow}>
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                style={{
+                  ...styles.densityToggleBtn,
+                  ...(current === opt.value ? styles.densityToggleBtnActive : null),
+                }}
+                title={opt.title}
+                onClick={() => onChange(opt.value)}
+                onDoubleClick={() => onChange(null)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {!auto && (
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              style={{
+                display: "block", margin: "8px 6px 0", padding: 0,
+                background: "none", border: "none",
+                fontFamily: "'DM Mono', monospace", fontSize: 10,
+                color: "var(--ink-light)", cursor: "pointer",
+                textDecoration: "underline", textDecorationColor: "var(--paper-dark)",
+              }}
+            >
+              reset to auto
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Trunk layout (used when level has >= 4 items) ──────────────────────────
+
+function TrunkLevel({
+  stemItems,
+  isMobile,
+  isOwner,
+  density,
+  rowGap,
+  junctionDotSize,
+  connectorWidth,
+  cardMaxWidth,
+  nodesById,
+  nodeToArtifacts,
+  artifactsById,
+  artifactToNodes,
+  stemId,
+  stemUserId,
+  stemUsername,
+  currentUserId,
+  currentNodeId,
+  onDive,
+}: {
+  stemItems: StemItem[];
+  isMobile: boolean;
+  isOwner: boolean;
+  density: Density;
+  rowGap: number;
+  junctionDotSize: number;
+  connectorWidth: number;
+  cardMaxWidth: number;
+  nodesById: Map<string, Node>;
+  nodeToArtifacts: Map<string, string[]>;
+  artifactsById: Map<string, Artifact>;
+  artifactToNodes: Map<string, string[]>;
+  stemId: string;
+  stemUserId: string;
+  stemUsername: string;
+  currentUserId: string | undefined;
+  currentNodeId: string | null;
+  onDive: (nodeId: string) => void;
+}) {
+  const getItemSide = useCallback(
+    (item: StemItem, index: number): "left" | "right" => {
+      if (item.side === 1) return "left";
+      if (item.side === 2) return "right";
+      return index % 2 === 0 ? "right" : "left";
+    },
+    []
+  );
+
+  const gridColumns = isMobile ? "4px 1fr" : "1fr 4px 1fr";
+
+  return (
+    <div
+      data-stem-grid
+      style={{
+        ...organicStyles.grid,
+        gridTemplateColumns: gridColumns,
+        gap: `${rowGap}px 0`,
+      }}
+    >
+      <div
+        style={{
+          ...organicStyles.trunk,
+          gridColumn: isMobile ? "1" : "2",
+          gridRow: `1 / ${stemItems.length + 2}`,
+        }}
+      />
+      {stemItems.map((item, index) => (
+        <StemBranchItem
+          key={item.id}
+          item={item}
+          index={index}
+          isMobile={isMobile}
+          side={getItemSide(item, index)}
+          isOwner={isOwner}
+          density={density}
+          junctionDotSize={junctionDotSize}
+          connectorWidth={connectorWidth}
+          cardMaxWidth={cardMaxWidth}
+          nodesById={nodesById}
+          nodeToArtifacts={nodeToArtifacts}
+          artifactsById={artifactsById}
+          artifactToNodes={artifactToNodes}
+          stemId={stemId}
+          stemUserId={stemUserId}
+          stemUsername={stemUsername}
+          currentUserId={currentUserId}
+          currentNodeId={currentNodeId}
+          onDive={onDive}
+        />
       ))}
     </div>
   );
 }
 
-/** Items inside a focused node — artifacts + sub-nodes on their own trunk. */
-function FocusedNodeItems({
-  artifacts,
-  childNodes,
-  isMobile,
+// ── Linear layout (used when level has <= 3 items) ─────────────────────────
+
+function LinearLevel({
+  stemItems,
+  isMobile: _isMobile,
+  isOwner,
   density,
-  junctionDotSize,
-  connectorWidth,
+  rowGap,
   cardMaxWidth,
+  nodesById,
+  nodeToArtifacts,
+  artifactsById,
+  artifactToNodes,
   stemId,
   stemUserId,
-  currentUserId,
   stemUsername,
-  focusedNodeId,
-  artifactToNodes,
-  nodeToArtifacts,
-  nodesById,
-  isOwner,
-  onNodeClick,
+  currentUserId,
+  currentNodeId,
+  onDive,
 }: {
-  artifacts: Artifact[];
-  childNodes: Node[];
+  stemItems: StemItem[];
   isMobile: boolean;
+  isOwner: boolean;
   density: Density;
-  junctionDotSize: number;
-  connectorWidth: number;
+  rowGap: number;
   cardMaxWidth: number;
+  nodesById: Map<string, Node>;
+  nodeToArtifacts: Map<string, string[]>;
+  artifactsById: Map<string, Artifact>;
+  artifactToNodes: Map<string, string[]>;
   stemId: string;
   stemUserId: string;
-  currentUserId: string | undefined;
   stemUsername: string;
-  focusedNodeId: string | null;
-  artifactToNodes: Map<string, string[]>;
-  nodeToArtifacts: Map<string, string[]>;
-  nodesById: Map<string, Node>;
-  isOwner: boolean;
-  onNodeClick: (nodeId: string) => void;
+  currentUserId: string | undefined;
+  currentNodeId: string | null;
+  onDive: (nodeId: string) => void;
 }) {
   const drag = useDragContext();
 
-  const connectorStyle: React.CSSProperties = { ...organicStyles.connector, width: connectorWidth };
-  const dotStyle: React.CSSProperties = {
-    ...organicStyles.junctionDot,
-    width: junctionDotSize,
-    height: junctionDotSize,
-  };
-
   return (
-    <>
-      {artifacts.map((artifact, i) => {
-        const side = isMobile ? "right" : (i % 2 === 0 ? "right" : "left");
-        const gridColumn = isMobile ? "2" : (side === "right" ? "2 / 4" : "1 / 3");
+    <div
+      style={{
+        ...organicStyles.linear,
+        gap: `${Math.max(rowGap, 16)}px`,
+      }}
+    >
+      {stemItems.map((item, index) => {
+        if (item.type === "node") {
+          const node = nodesById.get(item.id);
+          if (!node) return null;
+          const count = (nodeToArtifacts.get(node.id) || []).length;
+          return (
+            <div
+              key={item.id}
+              data-node-drop={node.id}
+              style={{ width: "100%", maxWidth: cardMaxWidth, borderRadius: 12, transition: "outline 0.15s" }}
+            >
+              <NodeCard node={node} artifactCount={count} density={density} onClick={() => onDive(node.id)} />
+            </div>
+          );
+        }
+        const artifact = artifactsById.get(item.id);
+        if (!artifact) return null;
         return (
           <div
-            key={artifact.id}
-            onPointerDown={isOwner && drag ? drag.handleArtifactDrag(artifact.id) : undefined}
+            key={item.id}
+            data-drag-idx={index}
+            onPointerDown={isOwner && drag ? drag.handlePointerDown(index, { id: item.id, type: "artifact" }) : undefined}
             style={{
-              ...organicStyles.branchItem,
-              gridColumn,
-              gridRow: i + 1,
-              flexDirection: side === "left" && !isMobile ? "row-reverse" : "row",
-              cursor: isOwner ? "grab" : undefined,
+              width: "100%", maxWidth: cardMaxWidth,
+              cursor: isOwner && drag ? "grab" : undefined,
               touchAction: isOwner ? "none" : undefined,
             }}
           >
-            <div style={{ ...organicStyles.connectorWrap, flexDirection: side === "left" && !isMobile ? "row-reverse" : "row" }}>
-              <div style={dotStyle} />
-              <div style={connectorStyle} />
-            </div>
-            <div style={{ ...organicStyles.cardWrapper, maxWidth: cardMaxWidth }}>
-              <ArtifactCard
-                artifact={artifact}
-                stemId={stemId}
-                stemUserId={stemUserId}
-                currentUserId={currentUserId}
-                stemUsername={stemUsername}
-                density={density}
-                nodeNames={
-                  (artifactToNodes.get(artifact.id)?.length ?? 0) > 1
-                    ? artifactToNodes.get(artifact.id)!
-                        .filter((nid) => nid !== focusedNodeId)
-                        .map((nid) => nodesById.get(nid)?.title ?? "")
-                        .filter(Boolean)
-                    : undefined
-                }
-              />
-            </div>
+            <ArtifactCard
+              artifact={artifact}
+              stemId={stemId}
+              stemUserId={stemUserId}
+              currentUserId={currentUserId}
+              stemUsername={stemUsername}
+              density={density}
+              nodeNames={
+                artifactToNodes.has(artifact.id)
+                  ? artifactToNodes
+                      .get(artifact.id)!
+                      .filter((nid) => nid !== currentNodeId)
+                      .map((nid) => nodesById.get(nid)?.title ?? "")
+                      .filter(Boolean)
+                  : undefined
+              }
+            />
           </div>
         );
       })}
-
-      {childNodes.map((child, i) => {
-        const childArtifactCount = (nodeToArtifacts.get(child.id) || []).length;
-        const rowIdx = artifacts.length + i + 1;
-        const side = isMobile ? "right" : (rowIdx % 2 === 0 ? "left" : "right");
-        const gridColumn = isMobile ? "2" : (side === "right" ? "2 / 4" : "1 / 3");
-        return (
-          <div
-            key={child.id}
-            style={{
-              ...organicStyles.branchItem,
-              gridColumn,
-              gridRow: rowIdx,
-              flexDirection: side === "left" && !isMobile ? "row-reverse" : "row",
-            }}
-          >
-            <div style={{ ...organicStyles.connectorWrap, flexDirection: side === "left" && !isMobile ? "row-reverse" : "row" }}>
-              <div style={dotStyle} />
-              <div style={connectorStyle} />
-            </div>
-            <div data-node-drop={child.id} style={{ flex: 1, minWidth: 0, maxWidth: cardMaxWidth, transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
-              <NodeCard
-                node={child}
-                artifactCount={childArtifactCount}
-                density={density}
-                onClick={() => onNodeClick(child.id)}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </>
+    </div>
   );
 }
+
+// ── One branch item on the trunk ───────────────────────────────────────────
 
 function StemBranchItem({
   item,
@@ -668,7 +739,8 @@ function StemBranchItem({
   stemUserId,
   stemUsername,
   currentUserId,
-  onNodeClick,
+  currentNodeId,
+  onDive,
 }: {
   item: StemItem;
   index: number;
@@ -687,7 +759,8 @@ function StemBranchItem({
   stemUserId: string;
   stemUsername: string;
   currentUserId: string | undefined;
-  onNodeClick: (nodeId: string) => void;
+  currentNodeId: string | null;
+  onDive: (nodeId: string) => void;
 }) {
   const drag = useDragContext();
 
@@ -708,15 +781,10 @@ function StemBranchItem({
     ? (() => {
         const node = nodesById.get(item.id);
         if (!node) return null;
-        const artifactCount = (nodeToArtifacts.get(node.id) || []).length;
+        const count = (nodeToArtifacts.get(node.id) || []).length;
         return (
-          <div data-node-drop={node.id} style={{ flex: 1, minWidth: 0, maxWidth: cardMaxWidth, transition: "outline 0.15s ease, box-shadow 0.15s ease", borderRadius: 12 }}>
-            <NodeCard
-              node={node}
-              artifactCount={artifactCount}
-              density={density}
-              onClick={() => onNodeClick(node.id)}
-            />
+          <div data-node-drop={node.id} style={{ flex: 1, minWidth: 0, maxWidth: cardMaxWidth, borderRadius: 12, transition: "outline 0.15s" }}>
+            <NodeCard node={node} artifactCount={count} density={density} onClick={() => onDive(node.id)} />
           </div>
         );
       })()
@@ -736,6 +804,7 @@ function StemBranchItem({
                 artifactToNodes.has(artifact.id)
                   ? artifactToNodes
                       .get(artifact.id)!
+                      .filter((nid) => nid !== currentNodeId)
                       .map((nid) => nodesById.get(nid)?.title ?? "")
                       .filter(Boolean)
                   : undefined
@@ -769,11 +838,10 @@ function StemBranchItem({
   );
 }
 
-// ── useMediaQuery hook ──────────────────────────────────────────────────────
+// ── useMediaQuery ──────────────────────────────────────────────────────────
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia(query);
@@ -782,7 +850,6 @@ function useMediaQuery(query: string): boolean {
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, [query]);
-
   return matches;
 }
 
@@ -794,15 +861,17 @@ const organicStyles: Record<string, React.CSSProperties> = {
     width: "100%",
   },
 
-  toolbar: {
+  gearRow: {
     display: "flex",
-    alignItems: "center",
     justifyContent: "flex-end",
-    gap: 12,
     maxWidth: 900,
-    margin: "0 auto 20px",
+    margin: "0 auto 8px",
     padding: "0 24px",
-    flexWrap: "wrap",
+  },
+
+  level: {
+    maxWidth: 900,
+    margin: "0 auto",
   },
 
   grid: {
@@ -815,6 +884,15 @@ const organicStyles: Record<string, React.CSSProperties> = {
     alignItems: "center",
   },
 
+  linear: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    maxWidth: 900,
+    margin: "0 auto",
+    padding: "8px 24px 0",
+  },
+
   trunk: {
     position: "relative",
     width: 4,
@@ -825,7 +903,6 @@ const organicStyles: Record<string, React.CSSProperties> = {
     borderRadius: 2,
     justifySelf: "center",
     opacity: 0.8,
-    cursor: "default",
     zIndex: 3,
   },
 
@@ -863,43 +940,16 @@ const organicStyles: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
 
-  // ── Focus panel ─────────────────────────────────────────────────────────
-  focusPanel: {
-    animation: "fadeUp 0.22s ease-out",
-    maxWidth: 900,
-    margin: "0 auto",
-  },
-
-  breadcrumbRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-
-  backBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "7px 14px",
-    borderRadius: 999,
-    background: "var(--paper-mid)",
-    border: "1px solid var(--paper-dark)",
-    color: "var(--ink-mid)",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    textDecoration: "none",
-    transition: "background 0.15s",
-  },
-
+  // ── Breadcrumb ─────────────────────────────────────────────────────────
   breadcrumb: {
     display: "flex",
     alignItems: "center",
     gap: 2,
     flexWrap: "wrap",
+    marginBottom: 10,
+    padding: "0 24px",
+    maxWidth: 900,
+    margin: "0 auto 10px",
   },
 
   breadcrumbLink: {
@@ -925,25 +975,41 @@ const organicStyles: Record<string, React.CSSProperties> = {
     alignItems: "center",
   },
 
-  focusedTitle: {
+  // ── Node header (when inside a node) ───────────────────────────────────
+  nodeHeader: {
+    padding: "0 24px",
+    maxWidth: 900,
+    margin: "0 auto 28px",
+  },
+
+  nodeHeaderEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+    display: "block",
+    lineHeight: 1,
+  },
+
+  nodeHeaderTitle: {
     fontFamily: "'DM Serif Display', serif",
     fontSize: "clamp(24px, 4vw, 36px)",
     fontWeight: 400,
     color: "var(--ink)",
     lineHeight: 1.2,
+    margin: 0,
     marginBottom: 8,
   },
 
-  focusedDesc: {
+  nodeHeaderDesc: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 15,
     color: "var(--ink-mid)",
     lineHeight: 1.6,
-    marginBottom: 12,
-    maxWidth: 480,
+    marginTop: 6,
+    marginBottom: 10,
+    maxWidth: 560,
   },
 
-  focusedCount: {
+  nodeHeaderCount: {
     fontFamily: "'DM Mono', monospace",
     fontSize: 12,
     color: "var(--ink-light)",

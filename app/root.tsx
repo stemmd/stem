@@ -177,11 +177,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             50%       { opacity: 0.4; }
           }
 
-          /* View Transitions for node focus (gracefully ignored in unsupported browsers) */
-          ::view-transition-old(stem-focus-panel),
-          ::view-transition-new(stem-focus-panel) {
-            animation-duration: 220ms;
-            animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+          /* Zoom motion for entering / leaving a stem level */
+          @keyframes zoomEnterIn {
+            from { opacity: 0; transform: scale(0.94); }
+            to   { opacity: 1; transform: scale(1); }
+          }
+          @keyframes zoomEnterOut {
+            from { opacity: 0; transform: scale(1.06); }
+            to   { opacity: 1; transform: scale(1); }
           }
         `}</style>
       </head>

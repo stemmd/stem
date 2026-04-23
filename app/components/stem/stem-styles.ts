@@ -596,28 +596,62 @@ export const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
   },
 
-  // ── Sibling strip (shown in focus mode) ─────────────────────────────────
-  siblingStrip: {
-    display: "flex", alignItems: "center", gap: 6,
-    overflowX: "auto" as const, padding: "2px 0",
-    marginBottom: 20,
-    scrollbarWidth: "thin" as const,
+  // ── Sibling row (table-of-contents style, no pill chrome) ───────────────
+  siblingRow: {
+    display: "flex", alignItems: "baseline", gap: 10,
+    flexWrap: "wrap" as const, marginBottom: 24,
+    maxWidth: 720,
   },
-  siblingPill: {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "6px 12px", borderRadius: 999,
-    background: "var(--paper-mid)", border: "1px solid var(--paper-dark)",
-    color: "var(--ink-mid)", fontFamily: "'DM Sans', sans-serif",
-    fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" as const,
-    flexShrink: 0, transition: "background 0.12s, border-color 0.12s, color 0.12s",
+  siblingRowLabel: {
+    fontFamily: "'DM Mono', monospace", fontSize: 11,
+    color: "var(--ink-light)", textTransform: "uppercase" as const,
+    letterSpacing: "0.08em", flexShrink: 0,
   },
-  siblingPillActive: {
-    background: "var(--leaf)", borderColor: "var(--leaf-border)",
+  siblingInline: {
+    display: "inline-flex", alignItems: "center", gap: 4,
+    padding: 0, background: "none", border: "none",
+    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+    color: "var(--ink-light)", cursor: "pointer",
+    textDecoration: "none", whiteSpace: "nowrap" as const,
+    transition: "color 0.12s",
+  },
+  siblingInlineActive: {
+    display: "inline-flex", alignItems: "center", gap: 5,
+    padding: "3px 10px", background: "var(--leaf)",
+    border: "none", borderRadius: 999,
+    fontFamily: "'DM Sans', sans-serif", fontSize: 13,
     color: "var(--forest)", fontWeight: 600,
+    cursor: "default", whiteSpace: "nowrap" as const,
   },
-  siblingStripLabel: {
+  siblingInlineSep: {
+    fontFamily: "'DM Mono', monospace", fontSize: 12,
+    color: "var(--ink-light)", opacity: 0.6, padding: "0 2px",
+  },
+
+  // ── Density gear + popover (owner-only, unobtrusive) ────────────────────
+  densityGear: {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: 30, height: 30, padding: 0,
+    background: "transparent", border: "1px solid transparent",
+    borderRadius: 999, color: "var(--ink-light)", cursor: "pointer",
+    fontSize: 15, transition: "background 0.12s, border-color 0.12s, color 0.12s",
+  },
+  densityGearActive: {
+    background: "var(--paper-mid)", borderColor: "var(--paper-dark)",
+    color: "var(--ink-mid)",
+  },
+  densityPopover: {
+    position: "absolute" as const, top: 38, right: 0, zIndex: 40,
+    padding: 8, background: "var(--surface)",
+    border: "1px solid var(--paper-dark)", borderRadius: 12,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+    minWidth: 160,
+    animation: "fadeUp 0.15s ease-out",
+  },
+  densityPopoverLabel: {
     fontFamily: "'DM Mono', monospace", fontSize: 10,
     color: "var(--ink-light)", textTransform: "uppercase" as const,
-    letterSpacing: "0.08em", flexShrink: 0, marginRight: 4,
+    letterSpacing: "0.08em", padding: "2px 6px 6px",
+    display: "block",
   },
 };
