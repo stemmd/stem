@@ -280,6 +280,121 @@ export function Layout({ children }: { children: React.ReactNode }) {
             font-weight: 600;
           }
 
+          /* Note markdown typography — reused for both the rendered display
+             and the Tiptap editor's contenteditable area so WYSIWYG feels
+             true to the final look. */
+          .stem-note-content,
+          .stem-note-editor {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            line-height: 1.65;
+            color: var(--ink);
+            word-wrap: break-word;
+          }
+          .stem-note-content h1,
+          .stem-note-content h2,
+          .stem-note-content h3,
+          .stem-note-editor h1,
+          .stem-note-editor h2,
+          .stem-note-editor h3 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            line-height: 1.25;
+            letter-spacing: -0.005em;
+            color: var(--ink);
+          }
+          .stem-note-content h1,
+          .stem-note-editor h1 { font-size: 22px; margin: 1.2em 0 0.4em; }
+          .stem-note-content h2,
+          .stem-note-editor h2 { font-size: 19px; margin: 1.1em 0 0.35em; }
+          .stem-note-content h3,
+          .stem-note-editor h3 { font-size: 16px; margin: 1em 0 0.3em; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+          .stem-note-content p,
+          .stem-note-editor p { margin: 0 0 0.75em; }
+          .stem-note-content p:last-child,
+          .stem-note-editor p:last-child { margin-bottom: 0; }
+          .stem-note-content a,
+          .stem-note-editor a {
+            color: var(--forest);
+            text-decoration: underline;
+            text-decoration-color: var(--leaf-border);
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+          }
+          .stem-note-content a:hover,
+          .stem-note-editor a:hover { text-decoration-color: var(--forest); }
+          .stem-note-content ul,
+          .stem-note-content ol,
+          .stem-note-editor ul,
+          .stem-note-editor ol { margin: 0 0 0.75em 1.3em; padding: 0; }
+          .stem-note-content li,
+          .stem-note-editor li { margin: 0 0 0.25em; }
+          .stem-note-content li > p,
+          .stem-note-editor li > p { margin: 0; }
+          .stem-note-content blockquote,
+          .stem-note-editor blockquote {
+            border-left: 3px solid var(--leaf-border);
+            padding: 2px 14px;
+            margin: 0.8em 0;
+            color: var(--ink-mid);
+            font-style: italic;
+            font-family: 'DM Serif Display', serif;
+            font-size: 16px;
+            line-height: 1.5;
+          }
+          .stem-note-content code,
+          .stem-note-editor code {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9em;
+            background: var(--paper-mid);
+            padding: 2px 5px;
+            border-radius: 4px;
+          }
+          .stem-note-content pre,
+          .stem-note-editor pre {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            background: var(--paper-mid);
+            border: 1px solid var(--paper-dark);
+            border-radius: 8px;
+            padding: 10px 12px;
+            overflow-x: auto;
+            margin: 0.8em 0;
+          }
+          .stem-note-content pre code,
+          .stem-note-editor pre code { background: transparent; padding: 0; }
+          .stem-note-content hr,
+          .stem-note-editor hr {
+            border: none;
+            border-top: 1px solid var(--paper-dark);
+            margin: 1.4em 0;
+          }
+          .stem-note-content img,
+          .stem-note-editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 0.8em 0;
+            display: block;
+          }
+
+          /* Tiptap editor: contenteditable area sizing + placeholder */
+          .stem-note-editor {
+            outline: none;
+          }
+          .stem-note-editor p.is-editor-empty:first-child::before {
+            content: attr(data-placeholder);
+            float: left;
+            color: var(--ink-light);
+            pointer-events: none;
+            height: 0;
+          }
+          .stem-note-editor:focus-visible { outline: none; }
+          /* Let the editor breathe inside its wrapper container */
+          .ProseMirror { min-height: 80px; }
+          .ProseMirror:focus { outline: none; }
+
           /* Page layout switches to flex when the reader is open */
           [data-reader-open="true"] .stem-page-layout {
             display: flex;

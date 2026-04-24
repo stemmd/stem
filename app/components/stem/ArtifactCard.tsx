@@ -6,6 +6,8 @@ import { styles } from "./stem-styles";
 import type { Artifact } from "./types";
 import type { Density } from "./useDensity";
 import { useReader } from "./ReaderContext";
+import { renderNoteMarkdown } from "./noteMarkdown";
+import { NoteEditor } from "./NoteEditor";
 
 /** True when a click event carried modifier keys the user expects to bypass custom handlers. */
 function isModifierClick(e: React.MouseEvent): boolean {
@@ -71,6 +73,10 @@ export function ArtifactCard({
   // down to just the title. Kept per-instance so multiple notes can be in
   // different states at once.
   const [noteCollapsed, setNoteCollapsed] = useState(false);
+  const [noteEditing, setNoteEditing] = useState(false);
+  const noteContent = artifact.body || artifact.note || "";
+  const [noteDraftTitle, setNoteDraftTitle] = useState(artifact.title ?? "");
+  const [noteDraftBody, setNoteDraftBody] = useState(noteContent);
 
   /**
    * Default click for any artifact link: when a reader is available and the user
@@ -90,6 +96,7 @@ export function ArtifactCard({
   useEffect(() => {
     if (editFetcher.state === "idle" && editFetcher.data?.success) {
       setEditing(false);
+      setNoteEditing(false);
     }
   }, [editFetcher.state, editFetcher.data]);
 
@@ -167,43 +174,110 @@ export function ArtifactCard({
 
   return (
     <div style={styles.artifactCard}>
-      {/* Note-type artifact — expanded by default, click to collapse */}
+      {/* Note-type artifact — rich markdown body, expanded by default */}
       {isNote && (
-        <div
-          style={{ ...styles.artifactBody, cursor: "pointer" }}
-          onClick={(e) => {
-            // Don't toggle when the click came from an interactive child
-            // (delete form, edit button, a link inside the note, etc.)
-            const target = e.target as HTMLElement;
-            if (target.closest("button, a, form, input, textarea")) return;
-            setNoteCollapsed((c) => !c);
-          }}
-          role="button"
-          aria-expanded={!noteCollapsed}
-          title={noteCollapsed ? "Expand note" : "Collapse note"}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: noteCollapsed ? 0 : 4 }}>
-            <span style={styles.artifactTypeBadge}>📝</span>
-            {artifact.title && <span style={{ ...styles.artifactTitle, cursor: "pointer" }}>{artifact.title}</span>}
-            <span style={{
-              marginLeft: "auto",
-              fontSize: 10,
-              color: "var(--ink-light)",
-              fontFamily: "'DM Mono', monospace",
-              flexShrink: 0,
-              transition: "transform 0.15s ease",
-              transform: noteCollapsed ? "rotate(0deg)" : "rotate(90deg)",
-            }}>▸</span>
-          </div>
-          {!noteCollapsed && (artifact.body || artifact.note) && (
-            <p style={styles.noteBody}>{artifact.body || artifact.note}</p>
+        <div style={styles.artifactBody}>
+          {noteEditing ? (
+            <editFetcher.Form method="post" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input type="hidden" name="intent" value="edit_note" />
+              <input type="hidden" name="artifactId" value={artifact.id} />
+              <input type="hidden" name="body" value={noteDraftBody} />
+              <input
+                type="text"
+                name="title"
+                value={noteDraftTitle}
+                onChange={(e) => setNoteDraftTitle(e.target.value)}
+                placeholder="Note title (optional)"
+                style={styles.noteInput}
+              />
+              <NoteEditor
+                initialMarkdown={noteContent}
+                onChange={setNoteDraftBody}
+                placeholder="Write your note."
+                minHeight={140}
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="submit"
+                  disabled={!noteDraftBody.trim() || editFetcher.state !== "idle"}
+                  style={styles.settingsSaveBtn}
+                >
+                  {editFetcher.state !== "idle" ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteEditing(false);
+                    setNoteDraftTitle(artifact.title ?? "");
+                    setNoteDraftBody(noteContent);
+                  }}
+                  style={styles.subtleBtn}
+                >
+                  Cancel
+                </button>
+              </div>
+              {editFetcher.data?.error && (
+                <p style={{ fontSize: 12, color: "var(--taken)", fontFamily: "'DM Mono', monospace" }}>
+                  {editFetcher.data.error}
+                </p>
+              )}
+            </editFetcher.Form>
+          ) : (
+            <div
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("button, a, form, input, textarea")) return;
+                setNoteCollapsed((c) => !c);
+              }}
+              role="button"
+              aria-expanded={!noteCollapsed}
+              title={noteCollapsed ? "Expand note" : "Collapse note"}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: noteCollapsed ? 0 : 6 }}>
+                <span style={styles.artifactTypeBadge}>📝</span>
+                {artifact.title && (
+                  <span style={{ ...styles.artifactTitle, cursor: "pointer" }}>{artifact.title}</span>
+                )}
+                <span style={{
+                  marginLeft: "auto",
+                  fontSize: 10,
+                  color: "var(--ink-light)",
+                  fontFamily: "'DM Mono', monospace",
+                  flexShrink: 0,
+                  transition: "transform 0.15s ease",
+                  transform: noteCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+                }}>▸</span>
+              </div>
+              {!noteCollapsed && noteContent && (
+                <div
+                  className="stem-note-content"
+                  dangerouslySetInnerHTML={{ __html: renderNoteMarkdown(noteContent) }}
+                />
+              )}
+            </div>
           )}
           <div style={styles.artifactFooter}>
             {showContributor && (
               <span style={styles.contributor}>by @{artifact.contributor_username}</span>
             )}
             <span style={styles.timestamp}>{formatRelative(artifact.created_at)}</span>
-            {canEdit && (
+            {canEdit && !noteEditing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNoteDraftTitle(artifact.title ?? "");
+                  setNoteDraftBody(noteContent);
+                  setNoteEditing(true);
+                }}
+                style={{ ...styles.deleteBtn, marginLeft: "auto" }}
+                title="Edit note"
+              >
+                ✏
+              </button>
+            )}
+            {canEdit && !noteEditing && (
               <deleteFetcher.Form method="post">
                 <input type="hidden" name="intent" value="delete_artifact" />
                 <input type="hidden" name="artifactId" value={artifact.id} />
@@ -211,7 +285,7 @@ export function ArtifactCard({
               </deleteFetcher.Form>
             )}
           </div>
-          {nodeNames && nodeNames.length > 0 && (
+          {nodeNames && nodeNames.length > 0 && !noteEditing && (
             <div style={styles.alsoInRow}>
               <span style={styles.alsoInLabel}>Also in:</span>
               {nodeNames.map((name) => (

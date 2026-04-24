@@ -4,6 +4,7 @@ import type { OGData } from "~/lib/og.server";
 import { isHttpUrl } from "~/lib/utils";
 import { styles } from "./stem-styles";
 import { ARTIFACT_TYPES } from "./ArtifactCard";
+import { NoteEditor } from "./NoteEditor";
 
 type ArtifactTab = "link" | "note" | "image" | "pdf";
 
@@ -222,6 +223,7 @@ export function AddArtifactForm({
       <addFetcher.Form method="post" style={styles.addArtifactForm}>
         <input type="hidden" name="intent" value="add_note" />
         {nodeId && <input type="hidden" name="nodeId" value={nodeId} />}
+        <input type="hidden" name="body" value={noteBody} />
         {tabBar}
         <input
           type="text"
@@ -231,13 +233,11 @@ export function AddArtifactForm({
           placeholder="Note title (optional)"
           style={styles.noteInput}
         />
-        <textarea
-          name="body"
-          value={noteBody}
-          onChange={(e) => setNoteBody(e.target.value)}
-          placeholder="Write your note..."
-          rows={5}
-          style={{ ...styles.quoteInput, fontFamily: "'DM Sans', sans-serif", fontStyle: "normal" }}
+        <NoteEditor
+          initialMarkdown=""
+          onChange={setNoteBody}
+          placeholder="Write your note. Use # for headings, **bold**, *italic*, - for lists, > for quotes."
+          minHeight={160}
         />
         <button
           type="submit"

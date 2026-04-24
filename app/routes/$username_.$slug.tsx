@@ -421,7 +421,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     const title = (form.get("title") as string | null)?.trim() || null;
     const body = (form.get("body") as string | null)?.trim();
     if (!body) return json({ error: "Note body is required." }, { status: 400 });
-    if (body.length > 5000) return json({ error: "Note is too long (max 5000 characters)." }, { status: 400 });
+    if (body.length > 20000) return json({ error: "Note is too long (max 20,000 characters)." }, { status: 400 });
     if (checkContent(title, body)) {
       return json({ error: "This content can't be posted. Please review our community guidelines." }, { status: 400 });
     }
@@ -528,6 +528,38 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
     await db
       .prepare("UPDATE artifacts SET note=?, quote=?" + (finalType ? ", source_type=?" : "") + " WHERE id=?")
       .bind(...(finalType ? [newNote, newQuote, finalType, artifactId] : [newNote, newQuote, artifactId]))
+      .run();
+
+    return json({ success: true });
+  }
+
+  if (intent === "edit_note") {
+    const artifactId = form.get("artifactId") as string;
+    const artifact = await db
+      .prepare("SELECT id, stem_id, added_by, source_type FROM artifacts WHERE id = ?")
+      .bind(artifactId)
+      .first<{ id: string; stem_id: string; added_by: string; source_type: string }>();
+
+    if (!artifact || artifact.stem_id !== stem.id || artifact.source_type !== "note") {
+      return json({ error: "Not found." }, { status: 404 });
+    }
+    if (artifact.added_by !== user.id && user.id !== stem.user_id) {
+      return json({ error: "Forbidden." }, { status: 403 });
+    }
+
+    const newTitle = (form.get("title") as string | null)?.trim() || null;
+    const newBody = (form.get("body") as string | null)?.trim();
+    if (!newBody) return json({ error: "Note body is required." }, { status: 400 });
+    if (newBody.length > 20000) return json({ error: "Note is too long (max 20,000 characters)." }, { status: 400 });
+    if (checkContent(newTitle, newBody)) {
+      return json({ error: "This content can't be posted. Please review our community guidelines." }, { status: 400 });
+    }
+
+    // Writing the full content into body and clearing the legacy note column
+    // normalizes older seed notes while we're editing them.
+    await db
+      .prepare("UPDATE artifacts SET title = ?, body = ?, note = NULL WHERE id = ?")
+      .bind(newTitle, newBody, artifactId)
       .run();
 
     return json({ success: true });
