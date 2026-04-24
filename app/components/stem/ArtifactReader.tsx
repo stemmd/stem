@@ -35,10 +35,24 @@ const READER_FIRST_HOSTS = [
 ];
 
 /**
+ * Domains where neither the iframe nor reader mode produces a good experience
+ * (usually because the content is a video or interactive widget that needs the
+ * host's own chrome). Skip the whole flow and open in a new tab directly.
+ */
+const NEW_TAB_ONLY_HOSTS = [
+  "ted.com",
+  "twitter.com",
+  "x.com",
+  "instagram.com",
+  "tiktok.com",
+  "twitch.tv",
+  "reddit.com",
+];
+
+/**
  * Minimum extracted-text length for reader mode to be considered a good result.
- * Anything shorter usually means we landed on a nav page, paywall stub, or
- * video-centric page (TED, etc.) and extraction didn't capture real content.
- * Below this threshold we skip straight to opening the URL in a new tab.
+ * Anything shorter usually means we landed on a nav page or paywall stub and
+ * extraction didn't capture real content.
  */
 const READER_MIN_LENGTH = 500;
 
@@ -51,6 +65,15 @@ function isReaderFirst(url: string): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase();
     return READER_FIRST_HOSTS.some((d) => hostMatches(host, d));
+  } catch {
+    return false;
+  }
+}
+
+function isNewTabOnly(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return NEW_TAB_ONLY_HOSTS.some((d) => hostMatches(host, d));
   } catch {
     return false;
   }
@@ -71,7 +94,11 @@ function primaryMode(artifact: Artifact): { kind: "embed"; src: string } | { kin
   const url = artifact.url;
   const lower = url.toLowerCase();
 
-  const youtubeId = type === "youtube" ? extractYouTubeId(url) : null;
+  // YouTube detection should not depend on source_type — some artifacts have
+  // a YouTube URL but were classified as "article" or similar by whatever
+  // flow added them. Rewriting a watch URL to the /embed form is the only
+  // way YouTube will load inside a frame.
+  const youtubeId = extractYouTubeId(url);
   const embedUrl = artifact.embed_url || (youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null);
   if (embedUrl) return { kind: "embed", src: embedUrl };
 
@@ -140,6 +167,15 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
     // web: go through the full iframe -> reader -> tab fallback chain.
     const run = async () => {
       const url = mode.url;
+
+      // 0. Sites where neither iframe nor reader serves the user well
+      //    (video-first or interactive): open in a new tab directly.
+      if (isNewTabOnly(url)) {
+        openInNewTab(url);
+        setState({ kind: "tab-opened" });
+        onClose();
+        return;
+      }
 
       // 1. Text-heavy whitelist: go straight to reader.
       if (isReaderFirst(url)) {
