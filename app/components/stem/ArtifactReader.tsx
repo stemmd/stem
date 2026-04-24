@@ -20,41 +20,93 @@ interface ReaderArticle {
 type ReaderState =
   | { kind: "loading" }
   | { kind: "reader"; article: ReaderArticle }
-  | { kind: "iframe"; src: string }
-  | { kind: "tab-opened" }; // a new tab was opened; panel will close
+  | { kind: "iframe"; src: string; allowSandbox: boolean }
+  | { kind: "tab-opened" };
 
-/** Decide how an artifact should be viewed inside the reader. */
-function resolveMode(artifact: Artifact): { kind: "embed"; src: string } | { kind: "pdf"; src: string } | { kind: "article"; url: string } | null {
+/**
+ * Domains where we know reader mode is a nicer experience than the iframe
+ * (heavy chrome, narrow reading column, distractions). The iframe would work,
+ * but the reader feels better — skip the frame-check and go straight to extract.
+ */
+const READER_FIRST_HOSTS = [
+  "wikipedia.org",
+  "nature.com",
+  "arxiv.org",
+];
+
+/**
+ * Minimum extracted-text length for reader mode to be considered a good result.
+ * Anything shorter usually means we landed on a nav page, paywall stub, or
+ * video-centric page (TED, etc.) and extraction didn't capture real content.
+ * Below this threshold we skip straight to opening the URL in a new tab.
+ */
+const READER_MIN_LENGTH = 500;
+
+function hostMatches(host: string, domain: string): boolean {
+  host = host.toLowerCase();
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
+function isReaderFirst(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return READER_FIRST_HOSTS.some((d) => hostMatches(host, d));
+  } catch {
+    return false;
+  }
+}
+
+/** Classify the artifact into one of the three primary view modes, ignoring whitelist. */
+function primaryMode(artifact: Artifact): { kind: "embed"; src: string } | { kind: "pdf"; src: string } | { kind: "web"; url: string } | null {
   const type = artifact.source_type;
   const mime = artifact.file_mime ?? "";
 
-  // File uploads live on our R2 via api.stem.md/files/<key>. PDFs render inline
-  // via the browser's native PDF viewer; images are already shown in the card,
-  // so opening them in the reader doesn't add anything.
   if (artifact.file_key) {
     const src = `https://api.stem.md/files/${artifact.file_key}`;
     if (type === "pdf" || mime === "application/pdf") return { kind: "pdf", src };
-    return null;
+    return null; // images/notes/files render inline, no reader needed
   }
 
   if (!artifact.url) return null;
   const url = artifact.url;
-  const lowerUrl = url.toLowerCase();
+  const lower = url.toLowerCase();
 
   const youtubeId = type === "youtube" ? extractYouTubeId(url) : null;
   const embedUrl = artifact.embed_url || (youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null);
   if (embedUrl) return { kind: "embed", src: embedUrl };
 
-  if (type === "pdf" || mime === "application/pdf" || lowerUrl.endsWith(".pdf")) {
+  if (type === "pdf" || mime === "application/pdf" || lower.endsWith(".pdf")) {
     return { kind: "pdf", src: url };
   }
 
-  // Wikipedia allows framing and reads well as itself — keep as iframe.
-  if (type === "wikipedia" || /\bwikipedia\.org\//.test(url)) {
-    return { kind: "embed", src: url };
-  }
+  return { kind: "web", url };
+}
 
-  return { kind: "article", url };
+async function fetchFrameCheck(url: string, signal: AbortSignal): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/frame-check?url=${encodeURIComponent(url)}`, { signal });
+    const data = (await res.json()) as { canFrame?: boolean };
+    return data.canFrame === true;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchReader(url: string, signal: AbortSignal): Promise<ReaderArticle | null> {
+  try {
+    const res = await fetch(`${API_BASE}/reader?url=${encodeURIComponent(url)}`, { signal });
+    const data = (await res.json()) as { success?: boolean; article?: ReaderArticle };
+    if (data.success && data.article && (data.article.length ?? 0) >= READER_MIN_LENGTH) {
+      return data.article;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function openInNewTab(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onClose: () => void }) {
@@ -63,47 +115,75 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setState({ kind: "loading" });
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
 
-    const mode = resolveMode(artifact);
+    const mode = primaryMode(artifact);
     if (!mode) {
-      // Nothing to open (note/image). Close silently.
       onClose();
       return;
     }
 
-    if (mode.kind === "embed" || mode.kind === "pdf") {
-      setState({ kind: "iframe", src: mode.src });
+    // Known-good embeds (YouTube, Vimeo, Twitter video, anything with embed_url): iframe directly.
+    if (mode.kind === "embed") {
+      setState({ kind: "iframe", src: mode.src, allowSandbox: false });
       return;
     }
 
-    // Article mode — extract via Worker.
-    const controller = new AbortController();
-    fetch(`${API_BASE}/reader?url=${encodeURIComponent(mode.url)}`, { signal: controller.signal })
-      .then((r) => r.json() as Promise<{ success?: boolean; article?: ReaderArticle; failed?: boolean }>)
-      .then((data) => {
+    // PDFs: iframe to the browser's native PDF viewer (no sandbox — breaks PDF rendering).
+    if (mode.kind === "pdf") {
+      setState({ kind: "iframe", src: mode.src, allowSandbox: false });
+      return;
+    }
+
+    // web: go through the full iframe -> reader -> tab fallback chain.
+    const run = async () => {
+      const url = mode.url;
+
+      // 1. Text-heavy whitelist: go straight to reader.
+      if (isReaderFirst(url)) {
+        const article = await fetchReader(url, controller.signal);
         if (cancelled) return;
-        if (data.success && data.article) {
-          setState({ kind: "reader", article: data.article });
-        } else {
-          // Transparent fallback: open the URL in a new tab and close the panel.
-          window.open(mode.url, "_blank", "noopener,noreferrer");
-          setState({ kind: "tab-opened" });
-          onClose();
+        if (article) {
+          setState({ kind: "reader", article });
+          return;
         }
-      })
-      .catch((err) => {
-        if (cancelled || (err as Error).name === "AbortError") return;
-        window.open(mode.url, "_blank", "noopener,noreferrer");
+        // Reader failed even though we were confident — open tab.
+        openInNewTab(url);
+        setState({ kind: "tab-opened" });
         onClose();
-      });
+        return;
+      }
+
+      // 2. Iframe first (check headers server-side).
+      const canFrame = await fetchFrameCheck(url, controller.signal);
+      if (cancelled) return;
+      if (canFrame) {
+        setState({ kind: "iframe", src: url, allowSandbox: true });
+        return;
+      }
+
+      // 3. Iframe blocked: try reader.
+      const article = await fetchReader(url, controller.signal);
+      if (cancelled) return;
+      if (article) {
+        setState({ kind: "reader", article });
+        return;
+      }
+
+      // 4. Last resort: open in a new tab.
+      openInNewTab(url);
+      setState({ kind: "tab-opened" });
+      onClose();
+    };
+    run();
 
     return () => {
       cancelled = true;
       controller.abort();
     };
-    // Only refetch when the artifact identity changes.
+    // Re-run the pipeline when the artifact identity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artifact.id]);
 
@@ -116,7 +196,24 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const originalUrl = artifact.url ?? "";
+  // If an iframe fails client-side (e.g. sandbox issues we couldn't predict), fall back to reader.
+  const onIframeError = () => {
+    if (state.kind !== "iframe" || !artifact.url) return;
+    const url = artifact.url;
+    // Ignore for embed (YouTube etc.) — those rarely fail silently.
+    if (!state.allowSandbox) return;
+    (async () => {
+      const article = await fetchReader(url, new AbortController().signal);
+      if (article) {
+        setState({ kind: "reader", article });
+      } else {
+        openInNewTab(url);
+        onClose();
+      }
+    })();
+  };
+
+  const originalUrl = artifact.url ?? (artifact.file_key ? `https://api.stem.md/files/${artifact.file_key}` : "");
   const domain = originalUrl ? getDomain(originalUrl) : "";
 
   return (
@@ -169,7 +266,7 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
                   </>
                 )}
               </div>
-              {/* Content is sanitized server-side on the Worker before it's
+              {/* Content was sanitized server-side by the Worker before it was
                   returned, so we can render directly. */}
               <div
                 className="stem-reader-content"
@@ -187,6 +284,8 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
             style={readerStyles.iframe}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            sandbox={state.allowSandbox ? "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" : undefined}
+            onError={onIframeError}
             title={artifact.title || "Embedded content"}
           />
         )}
