@@ -30,6 +30,8 @@ import { OrganicStem } from "~/components/stem/OrganicStem";
 import { AddNodeForm } from "~/components/stem/AddNodeForm";
 import { StemHeader } from "~/components/stem/StemHeader";
 import { PendingNodeRow } from "~/components/stem/PendingNodeRow";
+import { ReaderProvider, useReader } from "~/components/stem/ReaderContext";
+import { ArtifactReader } from "~/components/stem/ArtifactReader";
 
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
   if (!data?.stem) return [{ title: "Stem" }];
@@ -746,13 +748,24 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function StemPage() {
+export default function StemPageRoute() {
+  return (
+    <ReaderProvider>
+      <StemPage />
+    </ReaderProvider>
+  );
+}
+
+function StemPage() {
   const { stem, artifacts, pendingArtifacts, myPendingArtifacts, user, isOwner, isBranchMember, isFollowing, followCount, canContribute, branchMembers, stemCategories, nodes, artifactNodes, userHasApprovedArtifact, relatedStems } =
     useLoaderData<typeof loader>();
 
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [showPendingNodes, setShowPendingNodes] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const reader = useReader();
+  const readerOpen = !!reader?.current;
 
   // Build node tree and artifact mapping (memoized to avoid recomputation on state changes)
   const { approvedNodes, pendingNodes, rootNodes, childNodesMap, artifactToNodes, nodeToArtifacts, artifactsById, rootArtifacts, hasNodes } = useMemo(() => {
@@ -819,12 +832,13 @@ export default function StemPage() {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} data-reader-open={readerOpen ? "true" : "false"}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Nav user={user} />
+      <div className="stem-page-layout">
       <main style={styles.main}>
 
         {/* Stem header — centered above the trunk */}
@@ -948,6 +962,10 @@ export default function StemPage() {
           </div>
         )}
       </main>
+      {reader?.current && (
+        <ArtifactReader artifact={reader.current} onClose={reader.close} />
+      )}
+      </div>
 
       {/* Settings overlay */}
       {isOwner && showSettings && (
@@ -971,7 +989,7 @@ export default function StemPage() {
         </div>
       )}
 
-      {showSignupPrompt && (
+      {showSignupPrompt && !readerOpen && (
         <div style={styles.signupPrompt}>
           <p style={styles.signupText}>
             Enjoying what you see? Stem is where curious people share what they're exploring.
@@ -980,7 +998,7 @@ export default function StemPage() {
         </div>
       )}
 
-      <Footer />
+      {!readerOpen && <Footer />}
     </div>
   );
 }

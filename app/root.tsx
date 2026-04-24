@@ -179,6 +179,132 @@ export function Layout({ children }: { children: React.ReactNode }) {
             50%       { opacity: 0.4; }
           }
 
+          /* Reader mode article typography */
+          .stem-reader-content h1,
+          .stem-reader-content h2,
+          .stem-reader-content h3,
+          .stem-reader-content h4 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--ink);
+            line-height: 1.25;
+            letter-spacing: -0.005em;
+          }
+          .stem-reader-content h1 { font-size: 28px; margin: 2em 0 0.6em; }
+          .stem-reader-content h2 { font-size: 24px; margin: 1.8em 0 0.5em; }
+          .stem-reader-content h3 { font-size: 20px; margin: 1.6em 0 0.4em; }
+          .stem-reader-content h4 { font-size: 17px; margin: 1.4em 0 0.4em; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+          .stem-reader-content p { margin: 0 0 1.1em; }
+          .stem-reader-content a {
+            color: var(--forest);
+            text-decoration: underline;
+            text-decoration-color: var(--leaf-border);
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+          }
+          .stem-reader-content a:hover {
+            text-decoration-color: var(--forest);
+          }
+          .stem-reader-content img,
+          .stem-reader-content figure img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            display: block;
+            margin: 1.6em auto;
+          }
+          .stem-reader-content figure {
+            margin: 1.6em 0;
+          }
+          .stem-reader-content figcaption {
+            font-size: 13px;
+            color: var(--ink-light);
+            text-align: center;
+            margin-top: 8px;
+            font-style: italic;
+          }
+          .stem-reader-content blockquote {
+            border-left: 3px solid var(--leaf-border);
+            padding: 4px 18px;
+            margin: 1.4em 0;
+            color: var(--ink-mid);
+            font-style: italic;
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            line-height: 1.55;
+          }
+          .stem-reader-content ul,
+          .stem-reader-content ol {
+            margin: 0 0 1.1em 1.4em;
+            padding: 0;
+          }
+          .stem-reader-content li { margin: 0 0 0.4em; }
+          .stem-reader-content code {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.88em;
+            background: var(--paper-mid);
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+          .stem-reader-content pre {
+            font-family: 'DM Mono', monospace;
+            font-size: 14px;
+            line-height: 1.55;
+            background: var(--paper-mid);
+            border: 1px solid var(--paper-dark);
+            border-radius: 10px;
+            padding: 14px 16px;
+            overflow-x: auto;
+            margin: 1.2em 0;
+          }
+          .stem-reader-content pre code { background: transparent; padding: 0; }
+          .stem-reader-content hr {
+            border: none;
+            border-top: 1px solid var(--paper-dark);
+            margin: 2em 0;
+          }
+          .stem-reader-content table {
+            border-collapse: collapse;
+            margin: 1.4em 0;
+            font-size: 15px;
+            width: 100%;
+          }
+          .stem-reader-content th,
+          .stem-reader-content td {
+            border: 1px solid var(--paper-dark);
+            padding: 8px 12px;
+            text-align: left;
+          }
+          .stem-reader-content th {
+            background: var(--paper-mid);
+            font-weight: 600;
+          }
+
+          /* Page layout switches to flex when the reader is open */
+          [data-reader-open="true"] .stem-page-layout {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+          }
+          [data-reader-open="true"] .stem-page-layout > main {
+            flex: 0 0 38%;
+            min-width: 320px;
+            max-width: 480px;
+            overflow-y: auto;
+            padding-top: 24px;
+            padding-bottom: 80px;
+          }
+          @media (max-width: 900px) {
+            [data-reader-open="true"] .stem-page-layout > main {
+              display: none;
+            }
+            [data-reader-open="true"] .stem-page-layout {
+              height: calc(100vh - 60px);
+            }
+          }
+
         `}</style>
       </head>
       <body>

@@ -5,6 +5,12 @@ import { track } from "~/lib/analytics";
 import { styles } from "./stem-styles";
 import type { Artifact } from "./types";
 import type { Density } from "./useDensity";
+import { useReader } from "./ReaderContext";
+
+/** True when a click event carried modifier keys the user expects to bypass custom handlers. */
+function isModifierClick(e: React.MouseEvent): boolean {
+  return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
+}
 
 export const ARTIFACT_TYPES: { value: string; label: string; emoji: string }[] = [
   { value: "article", label: "Article", emoji: "📄" },
@@ -49,6 +55,7 @@ export function ArtifactCard({
   const deleteFetcher = useFetcher();
   const editFetcher = useFetcher<{ success?: boolean; error?: string }>();
   const reportFetcher = useFetcher<{ reported?: boolean }>();
+  const reader = useReader();
   const canEdit = currentUserId === artifact.added_by || currentUserId === stemUserId;
   const canReport = !!currentUserId && currentUserId !== artifact.added_by;
   const reported = reportFetcher.data?.reported === true;
@@ -60,6 +67,20 @@ export function ArtifactCard({
   const [editQuote, setEditQuote] = useState(artifact.quote ?? "");
   const [editType, setEditType] = useState(artifact.source_type);
   const [hovered, setHovered] = useState(false);
+
+  /**
+   * Default click for any artifact link: when a reader is available and the user
+   * didn't hold a modifier key (cmd/ctrl/shift/alt/middle-click), intercept and
+   * open the artifact inside the in-app reader. Otherwise fall through to the
+   * browser's native link behavior (new tab, save, etc.).
+   */
+  const openArtifact = (e: React.MouseEvent) => {
+    if (isModifierClick(e)) return;
+    track("open_link", { stem_id: stemId, artifact_id: artifact.id });
+    if (!reader) return;
+    e.preventDefault();
+    reader.open(artifact);
+  };
 
   // Close edit panel after save
   useEffect(() => {
@@ -96,7 +117,7 @@ export function ArtifactCard({
             {...(href ? { href, target: "_blank", rel: "noopener noreferrer" } : {})}
             draggable={false}
             style={{ ...styles.artifactCardCompactTitle, cursor: href ? "pointer" : "default" }}
-            onClick={href ? () => track("open_link", { stem_id: stemId, artifact_id: artifact.id }) : undefined}
+            onClick={href ? openArtifact : undefined}
           >
             {displayTitle}
           </Tag>
@@ -223,6 +244,7 @@ export function ArtifactCard({
             target="_blank"
             rel="noopener noreferrer"
             draggable={false}
+            onClick={openArtifact}
             style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "12px 0" }}
           >
             <span style={{ fontSize: 28, flexShrink: 0 }}>📄</span>
@@ -289,7 +311,7 @@ export function ArtifactCard({
           rel="noopener noreferrer"
           draggable={false}
           style={styles.artifactTitle}
-          onClick={() => track("open_link", { stem_id: stemId, artifact_id: artifact.id })}
+          onClick={openArtifact}
         >
           {artifact.title || artifact.url}
         </a>
