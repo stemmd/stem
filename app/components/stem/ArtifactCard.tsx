@@ -195,8 +195,8 @@ export function ArtifactCard({
               transform: noteCollapsed ? "rotate(0deg)" : "rotate(90deg)",
             }}>▸</span>
           </div>
-          {!noteCollapsed && artifact.body && (
-            <p style={styles.noteBody}>{artifact.body}</p>
+          {!noteCollapsed && (artifact.body || artifact.note) && (
+            <p style={styles.noteBody}>{artifact.body || artifact.note}</p>
           )}
           <div style={styles.artifactFooter}>
             {showContributor && (
