@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import DOMPurify from "isomorphic-dompurify";
 import type { Artifact } from "./types";
 import { extractYouTubeId, getDomain } from "~/lib/utils";
 import { API_BASE } from "~/lib/config";
@@ -170,15 +169,12 @@ export function ArtifactReader({ artifact, onClose }: { artifact: Artifact; onCl
                   </>
                 )}
               </div>
+              {/* Content is sanitized server-side on the Worker before it's
+                  returned, so we can render directly. */}
               <div
                 className="stem-reader-content"
                 style={readerStyles.articleBody}
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(state.article.content, {
-                    FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "input"],
-                    FORBID_ATTR: ["style", "onload", "onclick", "onerror", "onmouseover"],
-                  }),
-                }}
+                dangerouslySetInnerHTML={{ __html: state.article.content }}
               />
             </div>
           </article>
