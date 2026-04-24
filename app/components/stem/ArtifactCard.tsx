@@ -67,6 +67,10 @@ export function ArtifactCard({
   const [editQuote, setEditQuote] = useState(artifact.quote ?? "");
   const [editType, setEditType] = useState(artifact.source_type);
   const [hovered, setHovered] = useState(false);
+  // Notes are expanded by default; the viewer can click to collapse them back
+  // down to just the title. Kept per-instance so multiple notes can be in
+  // different states at once.
+  const [noteCollapsed, setNoteCollapsed] = useState(false);
 
   /**
    * Default click for any artifact link: when a reader is available and the user
@@ -100,7 +104,8 @@ export function ArtifactCard({
   const typeInfo = artifactTypeLabel(artifact.source_type);
 
   // ── Dense render: single-row compact with hover-reveal ──
-  if (density === "dense") {
+  // Notes skip dense compression — the whole point of a note IS its content.
+  if (density === "dense" && !isNote) {
     const displayTitle = artifact.title || (isNote ? (artifact.body ?? "").slice(0, 80) : null) || artifact.url || "Untitled";
     const hoverContent = artifact.note || artifact.quote || (isNote ? artifact.body : null);
     const href = isNote ? undefined : (isFileUpload ? `https://api.stem.md/files/${artifact.file_key}` : artifact.url) ?? undefined;
@@ -162,14 +167,35 @@ export function ArtifactCard({
 
   return (
     <div style={styles.artifactCard}>
-      {/* Note-type artifact */}
+      {/* Note-type artifact — expanded by default, click to collapse */}
       {isNote && (
-        <div style={styles.artifactBody}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        <div
+          style={{ ...styles.artifactBody, cursor: "pointer" }}
+          onClick={(e) => {
+            // Don't toggle when the click came from an interactive child
+            // (delete form, edit button, a link inside the note, etc.)
+            const target = e.target as HTMLElement;
+            if (target.closest("button, a, form, input, textarea")) return;
+            setNoteCollapsed((c) => !c);
+          }}
+          role="button"
+          aria-expanded={!noteCollapsed}
+          title={noteCollapsed ? "Expand note" : "Collapse note"}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: noteCollapsed ? 0 : 4 }}>
             <span style={styles.artifactTypeBadge}>📝</span>
-            {artifact.title && <span style={{ ...styles.artifactTitle, cursor: "default" }}>{artifact.title}</span>}
+            {artifact.title && <span style={{ ...styles.artifactTitle, cursor: "pointer" }}>{artifact.title}</span>}
+            <span style={{
+              marginLeft: "auto",
+              fontSize: 10,
+              color: "var(--ink-light)",
+              fontFamily: "'DM Mono', monospace",
+              flexShrink: 0,
+              transition: "transform 0.15s ease",
+              transform: noteCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+            }}>▸</span>
           </div>
-          {artifact.body && (
+          {!noteCollapsed && artifact.body && (
             <p style={styles.noteBody}>{artifact.body}</p>
           )}
           <div style={styles.artifactFooter}>
@@ -185,7 +211,6 @@ export function ArtifactCard({
               </deleteFetcher.Form>
             )}
           </div>
-          {/* "Also in" node tags */}
           {nodeNames && nodeNames.length > 0 && (
             <div style={styles.alsoInRow}>
               <span style={styles.alsoInLabel}>Also in:</span>
