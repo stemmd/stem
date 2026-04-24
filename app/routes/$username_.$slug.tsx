@@ -33,16 +33,32 @@ import { PendingNodeRow } from "~/components/stem/PendingNodeRow";
 import { ReaderProvider, useReader } from "~/components/stem/ReaderContext";
 import { ArtifactReader } from "~/components/stem/ArtifactReader";
 
+/** SVG data URI that renders a single emoji as a favicon. */
+function emojiFaviconHref(emoji: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${emoji}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
   if (!data?.stem) return [{ title: "Stem" }];
   const { stem, artifacts } = data;
   const description = stem.description ?? `${stem.title} on Stem`;
   const url = `https://stem.md/${params.username}/${params.slug}`;
   const ogImage = artifacts?.[0]?.image_url ?? stem.avatar_url ?? undefined;
+  // When the stem has an emoji, use it as the favicon so each stem page
+  // gets its own tab icon. Root.tsx's default stem-logo.png kicks in for
+  // emoji-less stems.
+  const faviconLinks = stem.emoji
+    ? [
+        { tagName: "link" as const, rel: "icon", href: emojiFaviconHref(stem.emoji) },
+        { tagName: "link" as const, rel: "shortcut icon", href: emojiFaviconHref(stem.emoji) },
+      ]
+    : [];
   return [
     { title: `${stem.title} — Stem` },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: url },
+    ...faviconLinks,
     { property: "og:title", content: stem.title },
     { property: "og:description", content: description },
     { property: "og:type", content: "article" },

@@ -39,8 +39,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="theme-color" content="#1C1B18" media="(prefers-color-scheme: dark)" />
         {/* Apply saved theme before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('stem-theme');if(t==='dark')document.documentElement.dataset.theme='dark';else if(t!=='system')document.documentElement.dataset.theme='light';})();` }} />
-        <Meta />
+        {/* Links first so route-level meta (which can emit `tagName: "link"`
+            entries) can override root-level links — specifically the favicon,
+            which we want the stem route to swap for the stem's emoji. */}
         <Links />
+        <Meta />
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-493GPLVVQZ" />
         <script dangerouslySetInnerHTML={{ __html: `
