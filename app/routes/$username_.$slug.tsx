@@ -41,10 +41,12 @@ function emojiFaviconHref(emoji: string): string {
 
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
   if (!data?.stem) return [{ title: "Stem" }];
-  const { stem, artifacts } = data;
+  const { stem } = data;
   const description = stem.description ?? `${stem.title} on Stem`;
   const url = `https://stem.md/${params.username}/${params.slug}`;
-  const ogImage = artifacts?.[0]?.image_url ?? stem.avatar_url ?? undefined;
+  // Dynamic OG image rendered per-stem by stems-api (1200x630, cached 24h
+  // per stem-metadata tuple on the edge).
+  const ogImage = `https://api.stem.md/og/stem/${params.username}/${params.slug}.png`;
   // When the stem has an emoji, use it as the favicon so each stem page
   // gets its own tab icon. Root.tsx's default stem-logo.png kicks in for
   // emoji-less stems.
@@ -64,11 +66,13 @@ export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
     { property: "og:type", content: "article" },
     { property: "og:site_name", content: "Stem" },
     { property: "og:url", content: url },
-    ...(ogImage ? [{ property: "og:image", content: ogImage }] : []),
-    { name: "twitter:card", content: ogImage ? "summary_large_image" : "summary" },
+    { property: "og:image", content: ogImage },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: stem.title },
     { name: "twitter:description", content: description },
-    ...(ogImage ? [{ name: "twitter:image", content: ogImage }] : []),
+    { name: "twitter:image", content: ogImage },
   ];
 };
 
